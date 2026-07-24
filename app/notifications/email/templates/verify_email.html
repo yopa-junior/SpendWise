@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<style>
+    body { font-family: Arial, sans-serif; background-color: #f4f6f8; margin: 0; padding: 0; }
+    .container { max-width: 500px; margin: 40px auto; background: #ffffff; border-radius: 8px; overflow: hidden; }
+    .header { background-color: #2563eb; color: #ffffff; padding: 24px; text-align: center; }
+    .content { padding: 24px; color: #333333; line-height: 1.6; }
+    .button { display: inline-block; background-color: #2563eb; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 6px; margin-top: 16px; }
+    .footer { padding: 16px 24px; font-size: 12px; color: #999999; text-align: center; }
+</style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Vérifie ton adresse email</h1>
+        </div>
+        <div class="content">
+            <p>Bonjour {{ nom }},</p>
+            <p>Merci de confirmer ton adresse email pour activer toutes les fonctionnalités de SpendWise, notamment les notifications et rappels.</p>
+            <a class="button" href="{{ verification_link }}">Vérifier mon email</a>
+            <p style="margin-top: 20px; font-size: 13px; color: #777;">Si le bouton ne fonctionne pas, copie ce lien dans ton navigateur : {{ verification_link }}</p>
+        </div>
+        <div class="footer">
+            SpendWise — Gestion de dépenses intelligente
+        </div>
+    </div>
+</body>
+</html>
