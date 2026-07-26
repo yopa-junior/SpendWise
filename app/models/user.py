@@ -10,6 +10,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database.base import Base
 
+
 class LanguePreferee(str, enum.Enum):
     FR = "fr"
     EN = "en"
@@ -33,7 +34,7 @@ class User(Base):
         String(3), ForeignKey("devises.code_devise"), nullable=True
     )
     langue_preferee: Mapped[LanguePreferee] = mapped_column(
-    SQLEnum(LanguePreferee), default=LanguePreferee.FR, nullable=False
+        SQLEnum(LanguePreferee), default=LanguePreferee.FR, nullable=False
     )
     fuseau_horaire: Mapped[str] = mapped_column(
         String(50), default="Africa/Douala", nullable=False
@@ -68,10 +69,12 @@ class User(Base):
     refresh_tokens: Mapped[list["RefreshToken"]] = relationship(
         back_populates="user", cascade="all, delete-orphan"
     )
-    
+    email_verifications: Mapped[list["EmailVerification"]] = relationship(
+        back_populates="user", cascade="all, delete-orphan"
+    )
     wallets: Mapped[list["Wallet"]] = relationship(
-    back_populates="user", cascade="all, delete-orphan"
-)
+        back_populates="user", cascade="all, delete-orphan"
+    )
 
     def __repr__(self) -> str:
         return f"<User id={self.id} email={self.email}>"
