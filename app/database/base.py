@@ -10,4 +10,12 @@ class Base(DeclarativeBase):
 
 # Force l'enregistrement de tous les modèles auprès de SQLAlchemy
 # avant toute utilisation (nécessaire pour résoudre les ForeignKey/relationships)
-from app.models import user, currency, refresh_token  # noqa: E402, F401
+
+from app.models import (  # noqa: E402, F401
+    user,
+    currency,
+    refresh_token,
+    email_verification,
+    wallet,
+    wallet_transaction,
+)
