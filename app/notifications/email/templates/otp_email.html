@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+</head>
+<body style="margin:0; padding:0; background-color:#f4f6f8; font-family: Arial, sans-serif;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f6f8; padding: 40px 0;">
+        <tr>
+            <td align="center">
+                <table role="presentation" width="480" cellpadding="0" cellspacing="0" style="background-color:#ffffff; border-radius:12px; overflow:hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
+
+                    <!-- En-tête festif -->
+                    <tr>
+                        <td style="background: linear-gradient(135deg, #2563eb, #7c3aed); padding: 32px 24px; text-align:center;">
+                            <div style="font-size: 40px; margin-bottom: 8px;">🎉 🎊 ✨</div>
+                            <h1 style="color:#ffffff; margin:0; font-size:22px;">Bienvenue sur SpendWise !</h1>
+                        </td>
+                    </tr>
+
+                    <!-- Contenu -->
+                    <tr>
+                        <td style="padding: 32px 24px; color:#333333; line-height:1.6;">
+                            <p style="font-size:16px;">Bonjour {{ nom }},</p>
+                            <p style="font-size:16px;">
+                                Ton aventure avec SpendWise commence maintenant 🚀 Plus qu'une étape pour activer ton compte : entre le code ci-dessous dans l'application.
+                            </p>
+
+                            <!-- Code OTP coloré -->
+                            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin: 28px 0;">
+                                <tr>
+                                    <td align="center">
+                                        <table role="presentation" cellpadding="0" cellspacing="0" style="background-color:#f4f6f8; border-radius:10px; padding: 18px 24px;">
+                                            <tr>
+                                                <td style="font-family: 'Courier New', monospace; font-size: 32px; font-weight:bold; letter-spacing: 6px;">
+                                                    {{ otp_html }}
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                            </table>
+
+                            <p style="font-size:14px; color:#777777; text-align:center;">
+                                ⏱️ Ce code expire dans {{ expiration_minutes }} minutes
+                            </p>
+
+                            <p style="font-size:14px; color:#777777; margin-top:24px;">
+                                Si tu n'es pas à l'origine de cette demande, ignore simplement cet email — ton compte reste protégé 🔒
+                            </p>
+
+                            <div style="text-align:center; font-size:28px; margin-top: 20px;">🥳 🎈 🎁</div>
+                        </td>
+                    </tr>
+
+                    <!-- Footer -->
+                    <tr>
+                        <td style="padding: 16px 24px; background-color:#f9fafb; text-align:center; font-size:12px; color:#999999;">
+                            SpendWise — Gestion de dépenses intelligente
+                        </td>
+                    </tr>
+
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>
