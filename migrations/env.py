@@ -13,6 +13,8 @@ from app.database.base import Base
 from app.models.user import User
 from app.models.refresh_token import RefreshToken
 from app.models.currency import Devise
+from app.models.wallet import Wallet
+from app.models.wallet_transaction import WalletTransaction
 
 config = context.config
 config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
