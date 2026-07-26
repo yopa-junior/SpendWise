@@ -66,6 +66,7 @@ Particuliers souhaitant un suivi budgétaire simplifié et assisté par IA, avec
     \item Système d'authentification JWT entièrement fonctionnel (inscription, connexion, refresh token avec rotation, déconnexion simple et globale).
     \item Système de vérification d'email par code OTP alphanumérique entièrement fonctionnel.
     \item Configuration email opérationnelle (SMTP Gmail applicatif).
+    \item Module e-wallet entièrement fonctionnel (création, dépôt, retrait, historique tracé).
     \item Base de données PostgreSQL structurée avec migrations Alembic versionnées.
 \end{itemize}
 
@@ -122,9 +123,15 @@ EMAIL_VERIFICATION (id PK, id_utilisateur FK -> UTILISATEUR ON DELETE CASCADE,
 TAUX_CHANGE (id_taux PK, devise_source FK -> DEVISE, devise_cible FK -> DEVISE,
              taux, date_maj)
 
-WALLET (id_wallet PK, id_utilisateur FK -> UTILISATEUR, nom_wallet,
-        type_wallet [especes/mobile_money/banque], solde, devise FK -> DEVISE,
-        date_creation)
+WALLET (id_wallet PK, id_utilisateur FK -> UTILISATEUR ON DELETE CASCADE,
+        nom_wallet, type_wallet [especes/mobile_money/banque],
+        solde NUMERIC(15,2), devise FK -> DEVISE, is_active BOOLEAN,
+        created_at, updated_at)
+
+WALLET_TRANSACTION (id_transaction PK, id_wallet FK -> WALLET ON DELETE CASCADE,
+                     type_transaction [depot/retrait/depense],
+                     montant NUMERIC(15,2), solde_apres NUMERIC(15,2),
+                     reference, created_at)
 
 CATEGORIE (id_categorie PK, id_utilisateur FK -> UTILISATEUR NULLABLE,
            nom, icone, couleur, est_par_defaut BOOLEAN)
@@ -133,10 +140,6 @@ DEPENSE (id_depense PK, id_utilisateur FK -> UTILISATEUR, id_wallet FK -> WALLET
          id_categorie FK -> CATEGORIE, montant, devise FK -> DEVISE,
          date_depense, description, source [manuelle/IA], est_recurrente BOOLEAN,
          created_at)
-
-TRANSACTION_WALLET (id_transaction PK, id_wallet FK -> WALLET,
-                     type [depot/retrait/depense], montant, date,
-                     id_depense FK -> DEPENSE NULLABLE, reference)
 
 BUDGET (id_budget PK, id_utilisateur FK -> UTILISATEUR,
         id_categorie FK -> CATEGORIE NULLABLE, montant_limite,
@@ -211,6 +214,35 @@ Email au design festif avec dégradé de couleurs, emojis, et code affiché avec
 
 \subsection{Champ purpose}
 Le champ \texttt{purpose} permet de réutiliser la même table pour d'autres usages futurs de type OTP : réinitialisation de mot de passe, changement d'adresse email.
+
+\section{Système e-wallet (implémenté)}
+
+\subsection{Principe général}
+Un wallet représente une source d'argent réelle de l'utilisateur (espèces, mobile money, compte bancaire). Chaque wallet possède un solde exprimé dans une devise donnée, et toute variation de ce solde est systématiquement tracée dans une table d'historique dédiée.
+
+\subsection{Règle de conception fondamentale}
+Le solde d'un wallet n'est jamais modifié par une simple mise à jour directe. Toute opération (dépôt, retrait, future dépense) passe par une transaction enregistrée, avec un instantané du solde résultant (\texttt{solde\_apres}), garantissant un historique complet et auditable — exigence indispensable pour une application financière.
+
+\subsection{Choix techniques}
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Type de wallet} : liste fermée (\texttt{especes}, \texttt{mobile\_money}, \texttt{banque}), pour garantir une cohérence exploitable dans les statistiques agrégées entre utilisateurs.
+    \item \textbf{Type numérique du solde} : \texttt{NUMERIC(15,2)} (decimal exact), jamais \texttt{FLOAT}, pour éliminer tout risque d'erreur d'arrondi sur des montants financiers.
+    \item \textbf{Désactivation plutôt que suppression} : un wallet est désactivé (\texttt{is\_active = false}) plutôt que supprimé, pour préserver l'intégrité de l'historique des transactions déjà liées.
+\end{itemize}
+
+\subsection{Opérations disponibles}
+\begin{itemize}[leftmargin=*]
+    \item Création d'un wallet, avec solde initial optionnel (tracé comme un premier dépôt).
+    \item Consultation de la liste des wallets de l'utilisateur (actifs ou tous).
+    \item Consultation d'un wallet précis.
+    \item Mise à jour du nom ou du statut actif/inactif.
+    \item Dépôt manuel (crédite le solde, trace la transaction).
+    \item Retrait manuel (débite le solde après vérification de solde suffisant, trace la transaction).
+    \item Consultation de l'historique complet des transactions d'un wallet.
+\end{itemize}
+
+\subsection{Sécurité d'accès}
+Chaque opération vérifie systématiquement que le wallet ciblé appartient bien à l'utilisateur authentifié (croisement de l'identifiant du wallet et de l'identifiant utilisateur extrait du token JWT), avant toute lecture ou modification. Toutes les routes de ce module exigent un compte avec email vérifié.
 
 \section{Fonctionnalités détaillées (périmètre complet du produit)}
 
