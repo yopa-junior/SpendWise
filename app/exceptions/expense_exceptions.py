@@ -17,3 +17,10 @@ class ExpenseNotFoundException(HTTPException):
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Dépense introuvable",
         )
+        
+class CategoryHasExpensesException(HTTPException):
+    def __init__(self):
+        super().__init__(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Impossible de supprimer cette catégorie : des dépenses y sont encore associées",
+        )
