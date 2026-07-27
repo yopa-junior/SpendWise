@@ -19,4 +19,6 @@ from app.models import (  # noqa: E402, F401
     wallet,
     wallet_transaction,
     category,
+    exchange_rate,
+    expense,
 )
