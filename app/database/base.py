@@ -18,4 +18,5 @@ from app.models import (  # noqa: E402, F401
     email_verification,
     wallet,
     wallet_transaction,
+    category,
 )

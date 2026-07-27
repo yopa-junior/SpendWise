@@ -1,0 +1,374 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[french]{babel}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{listings}
+\usepackage{tabularx}
+\usepackage{booktabs}
+
+\definecolor{codebg}{RGB}{245,245,245}
+\lstset{
+    backgroundcolor=\color{codebg},
+    basicstyle=\ttfamily\small,
+    breaklines=true,
+    frame=single,
+    columns=fullflexible
+}
+
+\hypersetup{colorlinks=true, linkcolor=blue, urlcolor=blue}
+
+\titleformat{\section}{\Large\bfseries}{\thesection}{1em}{}
+\titleformat{\subsection}{\large\bfseries}{\thesubsection}{1em}{}
+
+\title{\textbf{Cahier des Charges} \\ \large Application de Gestion des Dépenses avec Intégration IA \\ \normalsize Version 2 --- Mise à jour post-implémentation Auth \& Vérification Email}
+\author{Yopa Djonjue Franck Junior}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\section{Contexte et objectifs du projet}
+
+\subsection{Contexte}
+Ce document décrit les spécifications d'une application mobile et web de gestion des dépenses personnelles, intégrant l'intelligence artificielle pour automatiser la catégorisation, fournir des analyses budgétaires personnalisées et permettre une interaction conversationnelle avec l'utilisateur. Le projet s'inscrit dans une démarche personnelle à visée entrepreneuriale.
+
+\subsection{Objectifs}
+\begin{itemize}[leftmargin=*]
+    \item Permettre à l'utilisateur de suivre ses dépenses au quotidien de manière simple.
+    \item Intégrer un ou plusieurs wallets électroniques (espèces, mobile money, banque).
+    \item Automatiser la catégorisation des dépenses via l'IA.
+    \item Offrir un chatbot conversationnel pour interroger ses finances en langage naturel.
+    \item Générer des rappels d'échéances (factures récurrentes) et des résumés mensuels automatiques.
+    \item Fournir des visualisations graphiques claires de la répartition des dépenses.
+    \item Supporter le multi-devises.
+    \item Garantir une authentification sécurisée avec vérification d'identité par email.
+\end{itemize}
+
+\subsection{Public cible}
+Particuliers souhaitant un suivi budgétaire simplifié et assisté par IA, avec un ancrage initial sur le contexte camerounais (mobile money, coupures réseau, multi-devises).
+
+\subsection{Plateformes cibles}
+\begin{itemize}[leftmargin=*]
+    \item Application mobile : Flutter (Android en priorité, iOS envisageable).
+    \item Application web : Next.js (React + TypeScript).
+    \item Backend commun aux deux plateformes : FastAPI (Python).
+\end{itemize}
+
+\subsection{État d'avancement à la date de rédaction}
+\begin{itemize}[leftmargin=*]
+    \item Architecture backend complète mise en place (structure de dossiers, configuration).
+    \item Système d'authentification JWT entièrement fonctionnel (inscription, connexion, refresh token avec rotation, déconnexion simple et globale).
+    \item Système de vérification d'email par code OTP alphanumérique entièrement fonctionnel.
+    \item Gestion complète du mot de passe : réinitialisation par OTP (mot de passe oublié) et changement authentifié (rappel de l'ancien mot de passe).
+    \item Modification du profil utilisateur (nom, devise, langue, téléphone, fuseau horaire).
+    \item Configuration email opérationnelle (SMTP Gmail applicatif).
+    \item Module e-wallet entièrement fonctionnel (création, dépôt, retrait, historique tracé).
+    \item Module catégories entièrement fonctionnel (catégories par défaut protégées, catégories personnalisées, contrainte d'unicité par utilisateur).
+    \item Base de données PostgreSQL structurée avec migrations Alembic versionnées.
+\end{itemize}
+
+\section{Analyse des besoins}
+
+\subsection{Besoins fonctionnels utilisateurs}
+\begin{itemize}[leftmargin=*]
+    \item Créer un compte, se connecter, se déconnecter, réinitialiser son mot de passe.
+    \item Vérifier son adresse email via un code de vérification envoyé automatiquement.
+    \item Ajouter, modifier, supprimer une dépense.
+    \item Consulter la liste des dépenses et des statistiques (graphiques).
+    \item Créer et gérer plusieurs wallets (e-wallet).
+    \item Fixer un plafond de dépenses (budget) par catégorie et par période.
+    \item Recevoir des rappels d'échéances récurrentes (eau, électricité, loyer, etc.).
+    \item Recevoir un résumé automatique des dépenses chaque mois.
+    \item Interagir avec un chatbot IA pour poser des questions sur ses finances.
+\end{itemize}
+
+\subsection{Besoins liés à l'intelligence artificielle}
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Catégorisation automatique} : suggestion de catégorie à la saisie d'une dépense.
+    \item \textbf{Analyse budgétaire personnalisée} : détection d'anomalies, alertes de dépassement, conseils d'économie.
+    \item \textbf{Chatbot conversationnel} : réponses en langage naturel basées sur les données réelles de l'utilisateur.
+\end{itemize}
+
+\subsection{Contraintes}
+\begin{itemize}[leftmargin=*]
+    \item Support multi-devises avec conversion pour l'agrégation des statistiques.
+    \item Version gratuite au lancement (monétisation freemium envisagée en V2).
+    \item Utilisation d'une API IA externe (Claude ou OpenAI), jamais appelée directement depuis le client.
+    \item Fonctionnement partiel hors-ligne sur mobile (contexte de coupures réseau fréquentes).
+    \item La connexion est strictement bloquée tant que l'adresse email n'est pas vérifiée.
+\end{itemize}
+
+\section{Modèle Logique de Données (MLD)}
+
+\begin{lstlisting}
+UTILISATEUR (id_utilisateur PK, nom, email UNIQUE, mot_de_passe_hash,
+             devise_preferee FK -> DEVISE, langue_preferee [fr/en],
+             fuseau_horaire, is_active, is_verified, is_superuser,
+             failed_login_attempts, locked_until, photo_profil_url,
+             telephone, date_creation, updated_at, last_login)
+
+DEVISE (code_devise PK, nom, symbole)
+
+REFRESH_TOKEN (id_token PK, id_utilisateur FK -> UTILISATEUR ON DELETE CASCADE,
+               token_hash UNIQUE, expires_at, revoked, created_at)
+
+EMAIL_VERIFICATION (id PK, id_utilisateur FK -> UTILISATEUR ON DELETE CASCADE,
+                    email, otp_code, purpose [email_verification/
+                    password_reset/email_change], expires_at, is_used,
+                    attempts, created_at)
+
+TAUX_CHANGE (id_taux PK, devise_source FK -> DEVISE, devise_cible FK -> DEVISE,
+             taux, date_maj)
+
+WALLET (id_wallet PK, id_utilisateur FK -> UTILISATEUR ON DELETE CASCADE,
+        nom_wallet, type_wallet [especes/mobile_money/banque],
+        solde NUMERIC(15,2), devise FK -> DEVISE, is_active BOOLEAN,
+        created_at, updated_at)
+
+WALLET_TRANSACTION (id_transaction PK, id_wallet FK -> WALLET ON DELETE CASCADE,
+                     type_transaction [depot/retrait/depense],
+                     montant NUMERIC(15,2), solde_apres NUMERIC(15,2),
+                     reference, created_at)
+
+CATEGORIE (id_categorie PK, id_utilisateur FK -> UTILISATEUR NULLABLE ON DELETE CASCADE,
+           nom, icone [enum ferme], couleur [enum ferme, code hexadecimal],
+           est_par_defaut BOOLEAN, created_at,
+           UNIQUE(id_utilisateur, nom))
+
+DEPENSE (id_depense PK, id_utilisateur FK -> UTILISATEUR, id_wallet FK -> WALLET,
+         id_categorie FK -> CATEGORIE, montant, devise FK -> DEVISE,
+         date_depense, description, source [manuelle/IA], est_recurrente BOOLEAN,
+         created_at)
+
+BUDGET (id_budget PK, id_utilisateur FK -> UTILISATEUR,
+        id_categorie FK -> CATEGORIE NULLABLE, montant_limite,
+        periode [hebdo/mensuel], date_debut)
+
+RAPPEL (id_rappel PK, id_utilisateur FK -> UTILISATEUR,
+        id_categorie FK -> CATEGORIE NULLABLE, libelle,
+        frequence [mensuel/hebdo/personnalise], jour_du_mois,
+        prochaine_echeance, actif BOOLEAN, canal [push/email/sms])
+
+NOTIFICATION (id_notification PK, id_utilisateur FK -> UTILISATEUR,
+              type, message, lu BOOLEAN, date)
+
+CONVERSATION_IA (id_conversation PK, id_utilisateur FK -> UTILISATEUR, date_creation)
+
+MESSAGE_IA (id_message PK, id_conversation FK -> CONVERSATION_IA,
+            role [user/assistant], contenu, date)
+\end{lstlisting}
+
+\subsection{Relations clés}
+\begin{itemize}[leftmargin=*]
+    \item Un utilisateur possède plusieurs wallets ; chaque dépense est rattachée à un wallet et génère une transaction.
+    \item \texttt{REFRESH\_TOKEN} et \texttt{EMAIL\_VERIFICATION} sont supprimés automatiquement (\texttt{ON DELETE CASCADE}) lorsqu'un utilisateur est supprimé.
+    \item Une catégorie peut être globale (par défaut) ou personnalisée par utilisateur.
+    \item \texttt{TAUX\_CHANGE} permet l'agrégation des statistiques malgré le multi-devises.
+    \item \texttt{CONVERSATION\_IA} et \texttt{MESSAGE\_IA} conservent l'historique du chatbot.
+\end{itemize}
+
+\section{Système d'authentification (implémenté)}
+
+\subsection{Principe général}
+Authentification par JWT (JSON Web Token) associée à un mécanisme de refresh token avec rotation, stocké de manière sécurisée (hashé) en base de données pour permettre une révocation instantanée.
+
+\subsection{Flux d'inscription}
+\begin{enumerate}[leftmargin=*]
+    \item L'utilisateur soumet nom, email, mot de passe, devise et langue préférées.
+    \item Le mot de passe est haché avec Argon2 (jamais stocké en clair).
+    \item Le compte est créé avec \texttt{is\_verified = false}.
+    \item Un code de vérification alphanumérique à 6 caractères est généré et envoyé par email automatiquement.
+\end{enumerate}
+
+\subsection{Flux de connexion}
+\begin{enumerate}[leftmargin=*]
+    \item Vérification des identifiants (email + mot de passe).
+    \item Blocage si le compte est verrouillé (5 échecs consécutifs $\rightarrow$ verrouillage 15 minutes).
+    \item Blocage si le compte est désactivé.
+    \item \textbf{Blocage strict si l'email n'est pas vérifié} (choix de conception assumé).
+    \item Génération d'un access token (durée de vie : 30 minutes) et d'un refresh token opaque (durée de vie : 30 jours, haché avant stockage).
+\end{enumerate}
+
+\subsection{Rafraîchissement et déconnexion}
+\begin{itemize}[leftmargin=*]
+    \item Rotation systématique du refresh token à chaque rafraîchissement (l'ancien est révoqué).
+    \item Déconnexion simple (une session) ou globale (toutes les sessions/appareils).
+\end{itemize}
+
+\section{Système de vérification d'email par OTP (implémenté)}
+
+\subsection{Génération du code}
+Code alphanumérique de 6 caractères, généré via le module \texttt{secrets} (jamais \texttt{random}), sur un alphabet excluant les caractères visuellement ambigus (\texttt{0}, \texttt{1}, \texttt{I}, \texttt{O}).
+
+\subsection{Cycle de vie du code}
+\begin{itemize}[leftmargin=*]
+    \item Expiration après 10 minutes.
+    \item Usage unique : marqué comme utilisé après validation réussie, jamais réutilisable.
+    \item Anti brute-force : verrouillage 15 minutes après 5 tentatives incorrectes sur un même code.
+    \item Limite de renvoi : maximum 5 demandes de nouveau code par heure et par utilisateur.
+\end{itemize}
+
+\subsection{Présentation de l'email}
+Email au design festif avec dégradé de couleurs, emojis, et code affiché avec une couleur distincte par caractère pour améliorer la lisibilité et l'expérience utilisateur.
+
+\subsection{Champ purpose}
+Le champ \texttt{purpose} permet de réutiliser la même table pour d'autres usages futurs de type OTP : réinitialisation de mot de passe, changement d'adresse email.
+
+\section{Système e-wallet (implémenté)}
+
+\subsection{Principe général}
+Un wallet représente une source d'argent réelle de l'utilisateur (espèces, mobile money, compte bancaire). Chaque wallet possède un solde exprimé dans une devise donnée, et toute variation de ce solde est systématiquement tracée dans une table d'historique dédiée.
+
+\subsection{Règle de conception fondamentale}
+Le solde d'un wallet n'est jamais modifié par une simple mise à jour directe. Toute opération (dépôt, retrait, future dépense) passe par une transaction enregistrée, avec un instantané du solde résultant (\texttt{solde\_apres}), garantissant un historique complet et auditable — exigence indispensable pour une application financière.
+
+\subsection{Choix techniques}
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Type de wallet} : liste fermée (\texttt{especes}, \texttt{mobile\_money}, \texttt{banque}), pour garantir une cohérence exploitable dans les statistiques agrégées entre utilisateurs.
+    \item \textbf{Type numérique du solde} : \texttt{NUMERIC(15,2)} (decimal exact), jamais \texttt{FLOAT}, pour éliminer tout risque d'erreur d'arrondi sur des montants financiers.
+    \item \textbf{Désactivation plutôt que suppression} : un wallet est désactivé (\texttt{is\_active = false}) plutôt que supprimé, pour préserver l'intégrité de l'historique des transactions déjà liées.
+\end{itemize}
+
+\subsection{Opérations disponibles}
+\begin{itemize}[leftmargin=*]
+    \item Création d'un wallet, avec solde initial optionnel (tracé comme un premier dépôt).
+    \item Consultation de la liste des wallets de l'utilisateur (actifs ou tous).
+    \item Consultation d'un wallet précis.
+    \item Mise à jour du nom ou du statut actif/inactif.
+    \item Dépôt manuel (crédite le solde, trace la transaction).
+    \item Retrait manuel (débite le solde après vérification de solde suffisant, trace la transaction).
+    \item Consultation de l'historique complet des transactions d'un wallet.
+\end{itemize}
+
+\subsection{Sécurité d'accès}
+Chaque opération vérifie systématiquement que le wallet ciblé appartient bien à l'utilisateur authentifié (croisement de l'identifiant du wallet et de l'identifiant utilisateur extrait du token JWT), avant toute lecture ou modification. Toutes les routes de ce module exigent un compte avec email vérifié.
+
+\section{Système de catégories (implémenté)}
+
+\subsection{Principe général}
+Une catégorie classe les dépenses (Alimentation, Transport, Logement, etc.). Deux origines coexistent dans la même table : des catégories \textbf{par défaut}, communes à tous les utilisateurs, et des catégories \textbf{personnalisées}, propres à un utilisateur précis.
+
+\subsection{Choix techniques}
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Icônes et couleurs} : listes fermées (enums), pour garantir une cohérence visuelle et éviter des valeurs invalides ou disparates.
+    \item \textbf{Champ \texttt{id\_utilisateur} nullable} : \texttt{NULL} désigne une catégorie globale visible par tous ; une valeur renseignée désigne une catégorie propre à cet utilisateur uniquement.
+    \item \textbf{Contrainte d'unicité} : un même utilisateur ne peut pas créer deux catégories du même nom (insensible à la casse), contrôlée à la fois au niveau applicatif et par une contrainte \texttt{UNIQUE(id\_utilisateur, nom)} en base de données.
+    \item \textbf{Protection des catégories par défaut} : elles ne peuvent être ni modifiées ni supprimées par un utilisateur, quelle que soit son identité ; seule la commande de seed (exécutée par l'administrateur du projet) peut les créer.
+\end{itemize}
+
+\subsection{Opérations disponibles}
+\begin{itemize}[leftmargin=*]
+    \item Création d'une catégorie personnalisée (nom, icône, couleur).
+    \item Consultation de la liste complète accessible (catégories par défaut + catégories propres), triée avec les catégories par défaut en premier.
+    \item Consultation, modification et suppression d'une catégorie personnalisée précise (avec vérification systématique de propriété).
+\end{itemize}
+
+\section{Gestion du mot de passe et du profil (implémenté)}
+
+\subsection{Mot de passe oublié (utilisateur non connecté)}
+Réutilise directement le système d'OTP déjà construit pour la vérification d'email, avec un champ \texttt{purpose} distinct (\texttt{password\_reset}), démontrant la valeur de cette conception dès le départ. Aucune information sur l'existence d'un compte n'est jamais révélée si l'email soumis n'existe pas.
+
+\subsection{Réinitialisation avec code}
+L'utilisateur soumet son email, le code reçu, et un nouveau mot de passe. Après validation du code (mêmes règles de sécurité que la vérification d'email : expiration 10 minutes, anti brute-force, usage unique), le mot de passe est mis à jour et \textbf{toutes les sessions actives de l'utilisateur sont révoquées} par mesure de sécurité.
+
+\subsection{Changement de mot de passe (utilisateur connecté)}
+L'utilisateur doit fournir son mot de passe actuel pour confirmer son identité avant que le nouveau soit accepté. De la même manière que pour la réinitialisation, toutes les sessions sont révoquées après un changement réussi.
+
+\subsection{Modification du profil}
+Permet la mise à jour partielle du nom, de la devise préférée, de la langue, du numéro de téléphone et du fuseau horaire, sans jamais permettre la modification directe de champs sensibles (email, statut de vérification, statut administrateur).
+
+\section{Fonctionnalités détaillées (périmètre complet du produit)}
+
+\begin{itemize}[leftmargin=*]
+    \item \textbf{E-wallet} : gestion de solde par wallet, dépôt/retrait, historique, transfert entre wallets.
+    \item \textbf{Dépenses} : CRUD complet, gestion des dépenses récurrentes (génération automatique).
+    \item \textbf{Graphiques} : camembert par catégorie, courbe d'évolution mensuelle, comparatif mois par mois, jauge de budget restant.
+    \item \textbf{Budgets} : plafond par catégorie/période, notification à 80\% et 100\% du plafond.
+    \item \textbf{Rappels} : échéances récurrentes (factures), rappel de saisie si inactivité prolongée.
+    \item \textbf{Résumé mensuel automatique} : total dépensé, comparaison au mois précédent, catégorie la plus coûteuse.
+    \item \textbf{Export} : relevés au format PDF/CSV.
+    \item \textbf{Multi-devises} : saisie et conversion transparente pour les statistiques.
+\end{itemize}
+
+\section{Spécifications de l'intelligence artificielle (à implémenter)}
+
+\subsection{Catégorisation automatique}
+Le backend transmet la description et le montant d'une dépense à l'API IA, qui retourne une catégorie suggérée avec un score de confiance. L'utilisateur peut toujours corriger manuellement la suggestion.
+
+\subsection{Chatbot conversationnel}
+Le backend interroge d'abord la base de données pour obtenir les agrégats nécessaires, puis transmet ces données déjà calculées à l'IA, qui formule la réponse en langage naturel.
+
+\subsection{Analyse budgétaire et détection d'anomalies}
+Un traitement mensuel différé envoie un résumé agrégé des dépenses à l'IA, qui retourne des observations textuelles utilisées dans le résumé mensuel automatique.
+
+\subsection{Gestion des coûts et de la fiabilité}
+\begin{itemize}[leftmargin=*]
+    \item Mise en cache des réponses de catégorisation pour des descriptions similaires.
+    \item Fallback manuel systématique en cas d'indisponibilité de l'API IA.
+    \item Limite d'appels quotidiens par utilisateur pour le chatbot.
+    \item Timeout court (3 à 5 secondes) avec réponse dégradée en cas de lenteur.
+\end{itemize}
+
+\section{Architecture technique}
+
+\subsection{Backend}
+FastAPI (Python), architecture en couches : \texttt{models} $\rightarrow$ \texttt{repositories} $\rightarrow$ \texttt{services} $\rightarrow$ \texttt{api}. Authentification par JWT, hashage Argon2.
+
+\subsection{Base de données}
+PostgreSQL, migrations gérées par Alembic (async), UUID comme clés primaires.
+
+\subsection{Application mobile}
+Flutter, avec Riverpod pour la gestion d'état et fl\_chart pour les graphiques natifs.
+
+\subsection{Application web}
+Next.js (React + TypeScript), avec Recharts ou Chart.js pour les graphiques, TailwindCSS pour le style.
+
+\subsection{Intégration IA}
+Toute communication avec l'API IA (Claude ou OpenAI) transite exclusivement par le backend ; la clé API n'est jamais exposée côté client.
+
+\subsection{Emailing}
+Envoi via SMTP (compte Gmail applicatif dédié), bibliothèque \texttt{fastapi-mail}, templates HTML avec Jinja2.
+
+\subsection{Notifications et tâches planifiées}
+Un scheduler backend (Celery + Redis, ou APScheduler) vérifie quotidiennement les échéances et déclenche les notifications ; nettoyage périodique des codes OTP expirés.
+
+\subsection{Hébergement}
+Backend sur Railway ou Render ; base de données PostgreSQL managée sur Neon ou Supabase.
+
+\section{Exigences non fonctionnelles}
+
+\subsection{Sécurité}
+\begin{itemize}[leftmargin=*]
+    \item Hashage des mots de passe (Argon2), jamais stockés en clair.
+    \item Refresh tokens hachés (SHA-256) avant stockage, jamais conservés en clair.
+    \item Communications exclusivement en HTTPS en production.
+    \item Clé API IA et identifiants SMTP stockés uniquement côté serveur (variables d'environnement).
+    \item Validation stricte de toutes les entrées utilisateur (Pydantic).
+    \item Messages d'erreur génériques sur l'authentification pour ne jamais révéler l'existence d'un compte.
+\end{itemize}
+
+\subsection{Performance}
+\begin{itemize}[leftmargin=*]
+    \item Temps de réponse inférieur à 300 ms pour les opérations CRUD standards.
+    \item Appels IA traités de manière asynchrone, sans bloquer l'interface.
+\end{itemize}
+
+\subsection{Disponibilité}
+Fonctionnement hors-ligne partiel sur mobile : ajout de dépenses en local avec synchronisation automatique dès reconnexion.
+
+\subsection{Scalabilité}
+Architecture backend stateless, base de données indexée sur les identifiants utilisateur et les dates de dépense.
+
+\subsection{Conformité}
+Politique de confidentialité claire concernant l'usage des données financières par l'intelligence artificielle.
+
+\section{Conclusion}
+Ce cahier des charges définit le périmètre fonctionnel, technique et organisationnel d'une application de gestion des dépenses intégrant l'intelligence artificielle. Les fondations techniques critiques (authentification sécurisée, vérification d'identité) sont désormais implémentées et testées. Il constitue la base de référence pour la poursuite du développement des modules métier (dépenses, wallets, budgets) et de l'intégration de l'intelligence artificielle.
+
+\end{document}

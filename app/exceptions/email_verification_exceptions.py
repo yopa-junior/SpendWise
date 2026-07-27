@@ -57,3 +57,11 @@ class EmailNotVerifiedException(HTTPException):
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Merci de vérifier ton adresse email avant de te connecter",
         )
+
+
+class IncorrectCurrentPasswordException(HTTPException):
+    def __init__(self):
+        super().__init__(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Le mot de passe actuel est incorrect",
+        )       

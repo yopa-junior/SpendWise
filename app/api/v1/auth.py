@@ -9,6 +9,7 @@ from app.models.user import User
 from app.schemas.user import UserCreate, UserLogin, UserResponse
 from app.schemas.token import Token, RefreshTokenRequest
 from app.services.auth_service import AuthService
+from app.schemas.user import ForgotPasswordRequest, ResetPasswordRequest, ChangePasswordRequest
 
 router = APIRouter(prefix="/auth", tags=["Authentification"])
 
@@ -51,3 +52,25 @@ async def logout_all(
 @router.get("/me", response_model=UserResponse)
 async def get_me(current_user: User = Depends(get_current_user)):
     return current_user
+
+
+@router.post("/forgot-password", status_code=status.HTTP_204_NO_CONTENT)
+async def forgot_password(data: ForgotPasswordRequest, session: AsyncSession = Depends(get_db)):
+    service = AuthService(session)
+    await service.forgot_password(data.email)
+
+
+@router.post("/reset-password", status_code=status.HTTP_204_NO_CONTENT)
+async def reset_password(data: ResetPasswordRequest, session: AsyncSession = Depends(get_db)):
+    service = AuthService(session)
+    await service.reset_password(data.email, data.otp_code, data.nouveau_mot_de_passe)
+
+
+@router.post("/change-password", status_code=status.HTTP_204_NO_CONTENT)
+async def change_password(
+    data: ChangePasswordRequest,
+    session: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    service = AuthService(session)
+    await service.change_password(current_user, data.mot_de_passe_actuel, data.nouveau_mot_de_passe)

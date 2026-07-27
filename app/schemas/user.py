@@ -60,3 +60,37 @@ class UserResponse(BaseModel):
     last_login: datetime | None
 
     model_config = {"from_attributes": True}
+    
+
+    
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+
+class ResetPasswordRequest(BaseModel):
+    email: EmailStr
+    otp_code: str = Field(min_length=6, max_length=6, pattern=r"^[A-Z0-9]{6}$")
+    nouveau_mot_de_passe: str = Field(min_length=8, max_length=128)
+
+    @field_validator("nouveau_mot_de_passe")
+    @classmethod
+    def valider_complexite(cls, v: str) -> str:
+        if not any(c.isupper() for c in v):
+            raise ValueError("Le mot de passe doit contenir au moins une majuscule")
+        if not any(c.isdigit() for c in v):
+            raise ValueError("Le mot de passe doit contenir au moins un chiffre")
+        return v
+
+
+class ChangePasswordRequest(BaseModel):
+    mot_de_passe_actuel: str
+    nouveau_mot_de_passe: str = Field(min_length=8, max_length=128)
+
+    @field_validator("nouveau_mot_de_passe")
+    @classmethod
+    def valider_complexite(cls, v: str) -> str:
+        if not any(c.isupper() for c in v):
+            raise ValueError("Le mot de passe doit contenir au moins une majuscule")
+        if not any(c.isdigit() for c in v):
+            raise ValueError("Le mot de passe doit contenir au moins un chiffre")
+        return v
