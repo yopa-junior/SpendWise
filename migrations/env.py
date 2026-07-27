@@ -16,6 +16,8 @@ from app.models.currency import Devise
 from app.models.wallet import Wallet
 from app.models.wallet_transaction import WalletTransaction
 from app.models.category import Category
+from app.models.exchange_rate import ExchangeRate
+from app.models.expense import Expense
 
 config = context.config
 config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)

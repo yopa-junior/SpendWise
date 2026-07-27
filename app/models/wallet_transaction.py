@@ -37,3 +37,7 @@ class WalletTransaction(Base):
 
     def __repr__(self) -> str:
         return f"<WalletTransaction {self.type_transaction} montant={self.montant}>"
+    
+    expense_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("expenses.id", ondelete="SET NULL"), nullable=True
+    )
