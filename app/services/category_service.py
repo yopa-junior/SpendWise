@@ -13,6 +13,8 @@ from app.exceptions.category_exceptions import (
     CannotModifyDefaultCategoryException,
     CategoryAlreadyExistsException,
 )
+from app.repositories.expense_repository import ExpenseRepository
+from app.exceptions.expense_exceptions import CategoryHasExpensesException
 
 
 class CategoryService:
@@ -80,5 +82,21 @@ class CategoryService:
 
         if category.est_par_defaut:
             raise CannotModifyDefaultCategoryException()
+
+        await self.category_repo.delete(category)
+        
+    def __init__(self, session: AsyncSession):
+        self.session = session
+        self.category_repo = CategoryRepository(session)
+        self.expense_repo = ExpenseRepository(session)
+        
+    async def delete_category(self, category_id: uuid.UUID, user_id: uuid.UUID) -> None:
+        category = await self.get_category(category_id, user_id)
+
+        if category.est_par_defaut:
+            raise CannotModifyDefaultCategoryException()
+
+        if await self.expense_repo.count_by_category(category_id) > 0:
+            raise CategoryHasExpensesException()
 
         await self.category_repo.delete(category)
