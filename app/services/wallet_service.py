@@ -103,7 +103,12 @@ class WalletService:
     # ---------- Retrait ----------
 
     async def withdraw(
-        self, wallet_id: uuid.UUID, user_id: uuid.UUID, montant: Decimal, reference: str | None
+        self,
+        wallet_id: uuid.UUID,
+        user_id: uuid.UUID,
+        montant: Decimal,
+        reference: str | None,
+        expense_id: uuid.UUID | None = None,
     ) -> Wallet:
         wallet = await self.get_wallet(wallet_id, user_id)
         self._ensure_active(wallet)
@@ -121,9 +126,9 @@ class WalletService:
             type_transaction=TransactionType.RETRAIT,
             montant=montant,
             reference=reference,
+            expense_id=expense_id,
         )
         return wallet
-
     # ---------- Historique ----------
 
     async def get_transaction_history(
@@ -145,6 +150,7 @@ class WalletService:
         type_transaction: TransactionType,
         montant: Decimal,
         reference: str | None,
+        expense_id: uuid.UUID | None = None,
     ) -> WalletTransaction:
         transaction = WalletTransaction(
             wallet_id=wallet.id,
@@ -152,6 +158,7 @@ class WalletService:
             montant=montant,
             solde_apres=wallet.solde,
             reference=reference,
+            expense_id=expense_id,
             created_at=datetime.now(timezone.utc),
         )
         return await self.transaction_repo.create(transaction)

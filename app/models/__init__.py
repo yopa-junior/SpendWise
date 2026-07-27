@@ -7,6 +7,8 @@ from app.models.email_verification import EmailVerification
 from app.models.wallet import Wallet
 from app.models.wallet_transaction import WalletTransaction
 from app.models.category import Category
+from app.models.exchange_rate import ExchangeRate
+from app.models.expense import Expense
 
 __all__ = [
     "User",
@@ -16,4 +18,6 @@ __all__ = [
     "Wallet",
     "WalletTransaction",
     "Category",
+    "ExchangeRate",
+    "Expense",
 ]
