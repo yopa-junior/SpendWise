@@ -24,3 +24,11 @@ class CategoryHasExpensesException(HTTPException):
             status_code=status.HTTP_409_CONFLICT,
             detail="Impossible de supprimer cette catégorie : des dépenses y sont encore associées",
         )
+        
+        
+class NoReferenceCurrencyException(HTTPException):
+    def __init__(self):
+        super().__init__(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Aucune devise de référence définie. Précise une devise ou configure ta devise préférée dans ton profil.",
+        )
