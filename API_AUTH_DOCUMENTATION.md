@@ -23,11 +23,12 @@ Toutes les requêtes et réponses sont au format JSON (`Content-Type: applicatio
 13. [Modifier le profil](#13-modifier-le-profil)
 14. [Wallets (e-wallets)](#14-wallets-e-wallets)
 15. [Catégories](#15-catégories)
-16. [Authentification sur les routes protégées](#16-authentification-sur-les-routes-protégées)
-17. [Codes d'erreur globaux](#17-codes-derreur-globaux)
-18. [Devises disponibles](#18-devises-disponibles)
-19. [Icônes et couleurs de catégories disponibles](#19-icônes-et-couleurs-de-catégories-disponibles)
-20. [Guide de test rapide (curl)](#20-guide-de-test-rapide-curl)
+16. [Dépenses](#16-dépenses)
+17. [Authentification sur les routes protégées](#17-authentification-sur-les-routes-protégées)
+18. [Codes d'erreur globaux](#18-codes-derreur-globaux)
+19. [Devises disponibles](#19-devises-disponibles)
+20. [Icônes et couleurs de catégories disponibles](#20-icônes-et-couleurs-de-catégories-disponibles)
+21. [Guide de test rapide (curl)](#21-guide-de-test-rapide-curl)
 
 ---
 
@@ -538,7 +539,88 @@ Même restriction que la modification pour les catégories par défaut.
 
 ---
 
-## 16. Authentification sur les routes protégées
+## 16. Dépenses
+
+🔒 Toutes les routes nécessitent un `access_token` valide **et** un compte avec email vérifié.
+
+### 16.1 Créer une dépense
+
+**`POST /expenses`**
+
+```json
+{
+  "wallet_id": "uuid",
+  "category_id": "uuid",
+  "montant": 5000,
+  "devise": "XAF",
+  "description": "Courses de la semaine",
+  "date_depense": "2026-07-28",
+  "est_recurrente": false
+}
+```
+
+- `devise` peut être différente de la devise du wallet — une conversion automatique est appliquée au débit, via le dernier taux de change synchronisé.
+- Le montant enregistré dans la dépense reste toujours celui saisi par l'utilisateur, dans sa devise d'origine.
+
+Réponse — `201 Created` :
+```json
+{
+  "id": "uuid",
+  "wallet_id": "uuid",
+  "category_id": "uuid",
+  "montant": "5000.00",
+  "devise": "XAF",
+  "description": "Courses de la semaine",
+  "date_depense": "2026-07-28",
+  "source": "manuelle",
+  "est_recurrente": false,
+  "created_at": "...",
+  "updated_at": "..."
+}
+```
+
+### 16.2 Lister les dépenses (avec filtres optionnels)
+
+**`GET /expenses?category_id={id}&wallet_id={id}&date_debut=2026-07-01&date_fin=2026-07-31`**
+
+Tous les paramètres sont optionnels et combinables.
+
+### 16.3 Récupérer une dépense précise
+
+**`GET /expenses/{expense_id}`**
+
+### 16.4 Modifier une dépense
+
+**`PATCH /expenses/{expense_id}`**
+
+```json
+{
+  "category_id": "uuid",
+  "description": "Nouvelle description",
+  "date_depense": "2026-07-29"
+}
+```
+
+⚠️ `montant`, `devise` et `wallet_id` ne sont **jamais modifiables** après création (protection contre la désynchronisation financière). Pour corriger un montant erroné, supprime la dépense et recrée-la.
+
+### 16.5 Supprimer une dépense
+
+**`DELETE /expenses/{expense_id}`** → `204 No Content`
+
+⚠️ Le wallet associé est automatiquement **recrédité** du montant qui avait été débité (converti si nécessaire) — la suppression agit comme un remboursement complet.
+
+### Erreurs communes
+
+| Code | Cas |
+|---|---|
+| `404 Not Found` | Dépense, wallet ou catégorie introuvable / n'appartenant pas à l'utilisateur |
+| `400 Bad Request` | Solde insuffisant sur le wallet, ou aucun taux de change disponible pour la conversion demandée |
+
+**Recommandation frontend** : si la création échoue pour cause de taux de change manquant, afficher un message du type "Conversion temporairement indisponible pour cette devise, réessaie plus tard."
+
+---
+
+## 17. Authentification sur les routes protégées
 
 Pour toute route marquée 🔒, ajoute ce header à la requête :
 
@@ -567,7 +649,7 @@ final response = await dio.get(
 
 ---
 
-## 17. Codes d'erreur globaux
+## 18. Codes d'erreur globaux
 
 Toutes les erreurs suivent le format standard FastAPI :
 
@@ -605,7 +687,7 @@ Sauf les erreurs de validation (`422`), qui suivent le format Pydantic :
 
 ---
 
-## 18. Devises disponibles
+## 19. Devises disponibles
 
 Actuellement en base (table `devises`) :
 
@@ -621,7 +703,7 @@ Actuellement en base (table `devises`) :
 
 ---
 
-## 19. Icônes et couleurs de catégories disponibles
+## 20. Icônes et couleurs de catégories disponibles
 
 ### Icônes valides (`icone`)
 
@@ -650,7 +732,7 @@ Alimentation, Transport, Logement, Santé, Éducation, Loisirs, Shopping, Factur
 
 ---
 
-## 20. Guide de test rapide (curl)
+## 21. Guide de test rapide (curl)
 
 ```bash
 # 1. Inscription
