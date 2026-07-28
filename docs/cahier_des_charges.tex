@@ -65,8 +65,14 @@ Particuliers souhaitant un suivi budgétaire simplifié et assisté par IA, avec
     \item Architecture backend complète mise en place (structure de dossiers, configuration).
     \item Système d'authentification JWT entièrement fonctionnel (inscription, connexion, refresh token avec rotation, déconnexion simple et globale).
     \item Système de vérification d'email par code OTP alphanumérique entièrement fonctionnel.
+    \item Gestion complète du mot de passe : réinitialisation par OTP (mot de passe oublié) et changement authentifié (rappel de l'ancien mot de passe).
+    \item Modification du profil utilisateur (nom, devise, langue, téléphone, fuseau horaire).
     \item Configuration email opérationnelle (SMTP Gmail applicatif).
     \item Module e-wallet entièrement fonctionnel (création, dépôt, retrait, historique tracé).
+    \item Module catégories entièrement fonctionnel (catégories par défaut protégées, catégories personnalisées, contrainte d'unicité par utilisateur).
+    \item Module taux de change fonctionnel (synchronisation via API externe, conversion entre devises).
+    \item Module dépenses entièrement fonctionnel (création avec conversion automatique, remboursement du wallet à la suppression, protection des catégories utilisées).
+    \item Module budgets entièrement fonctionnel (budgets par catégorie ou globaux, calcul dynamique de la période en cours, calcul de progression avec seuils d'alerte à 80\% et 100\%).
     \item Base de données PostgreSQL structurée avec migrations Alembic versionnées.
 \end{itemize}
 
@@ -121,7 +127,7 @@ EMAIL_VERIFICATION (id PK, id_utilisateur FK -> UTILISATEUR ON DELETE CASCADE,
                     attempts, created_at)
 
 TAUX_CHANGE (id_taux PK, devise_source FK -> DEVISE, devise_cible FK -> DEVISE,
-             taux, date_maj)
+             taux NUMERIC(18,8), date_maj, UNIQUE(devise_source, devise_cible))
 
 WALLET (id_wallet PK, id_utilisateur FK -> UTILISATEUR ON DELETE CASCADE,
         nom_wallet, type_wallet [especes/mobile_money/banque],
@@ -133,17 +139,21 @@ WALLET_TRANSACTION (id_transaction PK, id_wallet FK -> WALLET ON DELETE CASCADE,
                      montant NUMERIC(15,2), solde_apres NUMERIC(15,2),
                      reference, created_at)
 
-CATEGORIE (id_categorie PK, id_utilisateur FK -> UTILISATEUR NULLABLE,
-           nom, icone, couleur, est_par_defaut BOOLEAN)
+CATEGORIE (id_categorie PK, id_utilisateur FK -> UTILISATEUR NULLABLE ON DELETE CASCADE,
+           nom, icone [enum ferme], couleur [enum ferme, code hexadecimal],
+           est_par_defaut BOOLEAN, created_at,
+           UNIQUE(id_utilisateur, nom))
 
-DEPENSE (id_depense PK, id_utilisateur FK -> UTILISATEUR, id_wallet FK -> WALLET,
-         id_categorie FK -> CATEGORIE, montant, devise FK -> DEVISE,
-         date_depense, description, source [manuelle/IA], est_recurrente BOOLEAN,
-         created_at)
+DEPENSE (id_depense PK, id_utilisateur FK -> UTILISATEUR ON DELETE CASCADE,
+         id_wallet FK -> WALLET ON DELETE CASCADE, id_categorie FK -> CATEGORIE,
+         montant NUMERIC(15,2), devise FK -> DEVISE, description,
+         date_depense, source [manuelle/ia], est_recurrente BOOLEAN,
+         created_at, updated_at)
 
-BUDGET (id_budget PK, id_utilisateur FK -> UTILISATEUR,
-        id_categorie FK -> CATEGORIE NULLABLE, montant_limite,
-        periode [hebdo/mensuel], date_debut)
+BUDGET (id_budget PK, id_utilisateur FK -> UTILISATEUR ON DELETE CASCADE,
+        id_categorie FK -> CATEGORIE NULLABLE (NULL = budget global),
+        montant_limite NUMERIC(15,2), devise FK -> DEVISE,
+        periode [hebdomadaire/mensuel], date_debut, created_at, updated_at)
 
 RAPPEL (id_rappel PK, id_utilisateur FK -> UTILISATEUR,
         id_categorie FK -> CATEGORIE NULLABLE, libelle,
@@ -243,6 +253,90 @@ Le solde d'un wallet n'est jamais modifié par une simple mise à jour directe. 
 
 \subsection{Sécurité d'accès}
 Chaque opération vérifie systématiquement que le wallet ciblé appartient bien à l'utilisateur authentifié (croisement de l'identifiant du wallet et de l'identifiant utilisateur extrait du token JWT), avant toute lecture ou modification. Toutes les routes de ce module exigent un compte avec email vérifié.
+
+\section{Système de catégories (implémenté)}
+
+\subsection{Principe général}
+Une catégorie classe les dépenses (Alimentation, Transport, Logement, etc.). Deux origines coexistent dans la même table : des catégories \textbf{par défaut}, communes à tous les utilisateurs, et des catégories \textbf{personnalisées}, propres à un utilisateur précis.
+
+\subsection{Choix techniques}
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Icônes et couleurs} : listes fermées (enums), pour garantir une cohérence visuelle et éviter des valeurs invalides ou disparates.
+    \item \textbf{Champ \texttt{id\_utilisateur} nullable} : \texttt{NULL} désigne une catégorie globale visible par tous ; une valeur renseignée désigne une catégorie propre à cet utilisateur uniquement.
+    \item \textbf{Contrainte d'unicité} : un même utilisateur ne peut pas créer deux catégories du même nom (insensible à la casse), contrôlée à la fois au niveau applicatif et par une contrainte \texttt{UNIQUE(id\_utilisateur, nom)} en base de données.
+    \item \textbf{Protection des catégories par défaut} : elles ne peuvent être ni modifiées ni supprimées par un utilisateur, quelle que soit son identité ; seule la commande de seed (exécutée par l'administrateur du projet) peut les créer.
+\end{itemize}
+
+\subsection{Opérations disponibles}
+\begin{itemize}[leftmargin=*]
+    \item Création d'une catégorie personnalisée (nom, icône, couleur).
+    \item Consultation de la liste complète accessible (catégories par défaut + catégories propres), triée avec les catégories par défaut en premier.
+    \item Consultation, modification et suppression d'une catégorie personnalisée précise (avec vérification systématique de propriété).
+\end{itemize}
+
+\section{Gestion du mot de passe et du profil (implémenté)}
+
+\subsection{Mot de passe oublié (utilisateur non connecté)}
+Réutilise directement le système d'OTP déjà construit pour la vérification d'email, avec un champ \texttt{purpose} distinct (\texttt{password\_reset}), démontrant la valeur de cette conception dès le départ. Aucune information sur l'existence d'un compte n'est jamais révélée si l'email soumis n'existe pas.
+
+\subsection{Réinitialisation avec code}
+L'utilisateur soumet son email, le code reçu, et un nouveau mot de passe. Après validation du code (mêmes règles de sécurité que la vérification d'email : expiration 10 minutes, anti brute-force, usage unique), le mot de passe est mis à jour et \textbf{toutes les sessions actives de l'utilisateur sont révoquées} par mesure de sécurité.
+
+\subsection{Changement de mot de passe (utilisateur connecté)}
+L'utilisateur doit fournir son mot de passe actuel pour confirmer son identité avant que le nouveau soit accepté. De la même manière que pour la réinitialisation, toutes les sessions sont révoquées après un changement réussi.
+
+\subsection{Modification du profil}
+Permet la mise à jour partielle du nom, de la devise préférée, de la langue, du numéro de téléphone et du fuseau horaire, sans jamais permettre la modification directe de champs sensibles (email, statut de vérification, statut administrateur).
+
+\section{Système de taux de change (implémenté)}
+
+\subsection{Principe général}
+Les taux de change ne sont jamais calculés en temps réel via un appel à une API externe au moment d'une transaction. Ils sont synchronisés périodiquement et stockés en base de données, garantissant rapidité et fiabilité sans dépendance réseau critique lors des opérations financières de l'utilisateur.
+
+\subsection{Source des données}
+Synchronisation via une API externe de taux de change, avec stockage local dans la table \texttt{TAUX\_CHANGE}. Un taux existe pour chaque paire ordonnée de devises actives dans l'application (ex: XAF$\to$EUR et EUR$\to$XAF sont deux entrées distinctes).
+
+\subsection{Conversion}
+Le service de conversion consulte le taux stocké le plus récent pour la paire de devises demandée et retourne le montant converti, arrondi à deux décimales. Si aucun taux n'existe pour une paire donnée, l'opération est bloquée avec un message explicite plutôt que d'utiliser une valeur par défaut arbitraire.
+
+\subsection{Évolution prévue}
+La synchronisation, actuellement déclenchée manuellement par script, sera automatisée via une tâche planifiée quotidienne dès la mise en place du système de traitement asynchrone (Celery ou APScheduler).
+
+\section{Système de dépenses (implémenté)}
+
+\subsection{Principe général}
+Une dépense est rattachée à un wallet (qui est débité) et à une catégorie. Elle peut être saisie dans une devise différente de celle du wallet utilisé : dans ce cas, le montant est automatiquement converti au moment du débit, tandis que la dépense elle-même conserve le montant et la devise originaux tels que saisis par l'utilisateur.
+
+\subsection{Flux de création}
+\begin{enumerate}[leftmargin=*]
+    \item Vérification que le wallet et la catégorie sont accessibles à l'utilisateur.
+    \item Conversion du montant vers la devise du wallet si nécessaire.
+    \item Enregistrement de la dépense avec le montant et la devise d'origine.
+    \item Débit du wallet du montant converti, avec traçabilité complète de la transaction et lien explicite vers la dépense à l'origine du mouvement.
+\end{enumerate}
+
+\subsection{Suppression et remboursement}
+La suppression d'une dépense recrédite automatiquement le wallet du montant qui avait été débité, garantissant qu'aucune valeur financière ne disparaît de manière incohérente pour l'utilisateur.
+
+\subsection{Contraintes de modification}
+Le montant, la devise et le wallet d'une dépense ne sont volontairement pas modifiables après création, pour éviter toute désynchronisation entre le solde du wallet et l'historique des transactions. Seules les métadonnées (catégorie, description, date) peuvent être ajustées ; une correction de montant nécessite la suppression puis la recréation de la dépense.
+
+\subsection{Protection des catégories}
+La suppression d'une catégorie personnalisée est bloquée tant qu'au moins une dépense y est associée, préservant l'intégrité de l'historique financier de l'utilisateur.
+
+\section{Système de budgets (implémenté)}
+
+\subsection{Principe général}
+Un budget fixe un plafond de dépenses sur une période récurrente (hebdomadaire ou mensuelle), soit pour une catégorie précise, soit de façon globale sur l'ensemble des dépenses de l'utilisateur.
+
+\subsection{Calcul dynamique de la période en cours}
+Plutôt que de stocker une fenêtre de dates figée, la période active est recalculée à chaque consultation à partir de la date de début du budget et de la date du jour, en tenant compte correctement des mois de longueurs différentes pour les budgets mensuels.
+
+\subsection{Calcul de progression}
+Pour un budget donné, l'ensemble des dépenses concernées sur la période en cours est agrégé, avec conversion de chaque dépense vers la devise de référence du budget si nécessaire. Le pourcentage d'utilisation du plafond est calculé, ainsi que deux indicateurs booléens signalant si le seuil de 80\% ou de 100\% est atteint.
+
+\subsection{Point d'extension pour les notifications}
+Le calcul des seuils est conçu comme un point d'extension réutilisable : le futur module de notifications s'appuiera directement sur ce même calcul pour déclencher des alertes, sans duplication de logique métier.
 
 \section{Fonctionnalités détaillées (périmètre complet du produit)}
 
