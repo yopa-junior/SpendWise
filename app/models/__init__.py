@@ -9,6 +9,7 @@ from app.models.wallet_transaction import WalletTransaction
 from app.models.category import Category
 from app.models.exchange_rate import ExchangeRate
 from app.models.expense import Expense
+from app.models.budget import Budget
 
 __all__ = [
     "User",
@@ -20,4 +21,5 @@ __all__ = [
     "Category",
     "ExchangeRate",
     "Expense",
+    "Budget",
 ]
