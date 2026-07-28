@@ -24,11 +24,12 @@ Toutes les requêtes et réponses sont au format JSON (`Content-Type: applicatio
 14. [Wallets (e-wallets)](#14-wallets-e-wallets)
 15. [Catégories](#15-catégories)
 16. [Dépenses](#16-dépenses)
-17. [Authentification sur les routes protégées](#17-authentification-sur-les-routes-protégées)
-18. [Codes d'erreur globaux](#18-codes-derreur-globaux)
-19. [Devises disponibles](#19-devises-disponibles)
-20. [Icônes et couleurs de catégories disponibles](#20-icônes-et-couleurs-de-catégories-disponibles)
-21. [Guide de test rapide (curl)](#21-guide-de-test-rapide-curl)
+17. [Budgets](#17-budgets)
+18. [Authentification sur les routes protégées](#18-authentification-sur-les-routes-protégées)
+19. [Codes d'erreur globaux](#19-codes-derreur-globaux)
+20. [Devises disponibles](#20-devises-disponibles)
+21. [Icônes et couleurs de catégories disponibles](#21-icônes-et-couleurs-de-catégories-disponibles)
+22. [Guide de test rapide (curl)](#22-guide-de-test-rapide-curl)
 
 ---
 
@@ -620,7 +621,88 @@ Tous les paramètres sont optionnels et combinables.
 
 ---
 
-## 17. Authentification sur les routes protégées
+## 17. Budgets
+
+🔒 Toutes les routes nécessitent un `access_token` valide **et** un compte avec email vérifié.
+
+### 17.1 Créer un budget
+
+**`POST /budgets`**
+
+Budget par catégorie :
+```json
+{
+  "category_id": "uuid",
+  "montant_limite": 50000,
+  "devise": "XAF",
+  "periode": "mensuel",
+  "date_debut": "2026-07-01"
+}
+```
+
+Budget global (toutes catégories confondues) — `category_id` à `null` :
+```json
+{
+  "category_id": null,
+  "montant_limite": 200000,
+  "devise": "XAF",
+  "periode": "mensuel",
+  "date_debut": "2026-07-01"
+}
+```
+
+`periode` accepte : `"hebdomadaire"` ou `"mensuel"`.
+
+### 17.2 Lister les budgets
+
+**`GET /budgets`**
+
+### 17.3 Récupérer un budget précis
+
+**`GET /budgets/{budget_id}`**
+
+### 17.4 Modifier un budget
+
+**`PATCH /budgets/{budget_id}`**
+```json
+{
+  "montant_limite": 60000
+}
+```
+
+⚠️ `devise`, `periode` et `date_debut` ne sont pas modifiables — supprime et recrée le budget pour changer ces paramètres.
+
+### 17.5 Supprimer un budget
+
+**`DELETE /budgets/{budget_id}`** → `204 No Content`
+
+### 17.6 Consulter la progression d'un budget
+
+**`GET /budgets/{budget_id}/progress`**
+
+Réponse — `200 OK` :
+```json
+{
+  "budget_id": "uuid",
+  "montant_limite": "50000.00",
+  "montant_depense": "42000.00",
+  "pourcentage": "84.00",
+  "devise": "XAF",
+  "periode_debut": "2026-07-01",
+  "periode_fin": "2026-07-31",
+  "seuil_80_atteint": true,
+  "seuil_100_atteint": false
+}
+```
+
+- `periode_debut` / `periode_fin` reflètent la fenêtre de la période **en cours**, recalculée dynamiquement à chaque appel.
+- `montant_depense` agrège toutes les dépenses concernées, converties dans la devise du budget si nécessaire.
+
+**Recommandation frontend** : afficher une barre de progression colorée (verte < 80%, orange entre 80-100%, rouge ≥ 100%) en te basant directement sur `seuil_80_atteint` et `seuil_100_atteint`.
+
+---
+
+## 18. Authentification sur les routes protégées
 
 Pour toute route marquée 🔒, ajoute ce header à la requête :
 
@@ -649,7 +731,7 @@ final response = await dio.get(
 
 ---
 
-## 18. Codes d'erreur globaux
+## 19. Codes d'erreur globaux
 
 Toutes les erreurs suivent le format standard FastAPI :
 
@@ -687,7 +769,7 @@ Sauf les erreurs de validation (`422`), qui suivent le format Pydantic :
 
 ---
 
-## 19. Devises disponibles
+## 20. Devises disponibles
 
 Actuellement en base (table `devises`) :
 
@@ -703,7 +785,7 @@ Actuellement en base (table `devises`) :
 
 ---
 
-## 20. Icônes et couleurs de catégories disponibles
+## 21. Icônes et couleurs de catégories disponibles
 
 ### Icônes valides (`icone`)
 
@@ -732,7 +814,7 @@ Alimentation, Transport, Logement, Santé, Éducation, Loisirs, Shopping, Factur
 
 ---
 
-## 21. Guide de test rapide (curl)
+## 22. Guide de test rapide (curl)
 
 ```bash
 # 1. Inscription

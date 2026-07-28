@@ -72,6 +72,7 @@ Particuliers souhaitant un suivi budgétaire simplifié et assisté par IA, avec
     \item Module catégories entièrement fonctionnel (catégories par défaut protégées, catégories personnalisées, contrainte d'unicité par utilisateur).
     \item Module taux de change fonctionnel (synchronisation via API externe, conversion entre devises).
     \item Module dépenses entièrement fonctionnel (création avec conversion automatique, remboursement du wallet à la suppression, protection des catégories utilisées).
+    \item Module budgets entièrement fonctionnel (budgets par catégorie ou globaux, calcul dynamique de la période en cours, calcul de progression avec seuils d'alerte à 80\% et 100\%).
     \item Base de données PostgreSQL structurée avec migrations Alembic versionnées.
 \end{itemize}
 
@@ -149,9 +150,10 @@ DEPENSE (id_depense PK, id_utilisateur FK -> UTILISATEUR ON DELETE CASCADE,
          date_depense, source [manuelle/ia], est_recurrente BOOLEAN,
          created_at, updated_at)
 
-BUDGET (id_budget PK, id_utilisateur FK -> UTILISATEUR,
-        id_categorie FK -> CATEGORIE NULLABLE, montant_limite,
-        periode [hebdo/mensuel], date_debut)
+BUDGET (id_budget PK, id_utilisateur FK -> UTILISATEUR ON DELETE CASCADE,
+        id_categorie FK -> CATEGORIE NULLABLE (NULL = budget global),
+        montant_limite NUMERIC(15,2), devise FK -> DEVISE,
+        periode [hebdomadaire/mensuel], date_debut, created_at, updated_at)
 
 RAPPEL (id_rappel PK, id_utilisateur FK -> UTILISATEUR,
         id_categorie FK -> CATEGORIE NULLABLE, libelle,
@@ -321,6 +323,20 @@ Le montant, la devise et le wallet d'une dépense ne sont volontairement pas mod
 
 \subsection{Protection des catégories}
 La suppression d'une catégorie personnalisée est bloquée tant qu'au moins une dépense y est associée, préservant l'intégrité de l'historique financier de l'utilisateur.
+
+\section{Système de budgets (implémenté)}
+
+\subsection{Principe général}
+Un budget fixe un plafond de dépenses sur une période récurrente (hebdomadaire ou mensuelle), soit pour une catégorie précise, soit de façon globale sur l'ensemble des dépenses de l'utilisateur.
+
+\subsection{Calcul dynamique de la période en cours}
+Plutôt que de stocker une fenêtre de dates figée, la période active est recalculée à chaque consultation à partir de la date de début du budget et de la date du jour, en tenant compte correctement des mois de longueurs différentes pour les budgets mensuels.
+
+\subsection{Calcul de progression}
+Pour un budget donné, l'ensemble des dépenses concernées sur la période en cours est agrégé, avec conversion de chaque dépense vers la devise de référence du budget si nécessaire. Le pourcentage d'utilisation du plafond est calculé, ainsi que deux indicateurs booléens signalant si le seuil de 80\% ou de 100\% est atteint.
+
+\subsection{Point d'extension pour les notifications}
+Le calcul des seuils est conçu comme un point d'extension réutilisable : le futur module de notifications s'appuiera directement sur ce même calcul pour déclencher des alertes, sans duplication de logique métier.
 
 \section{Fonctionnalités détaillées (périmètre complet du produit)}
 
