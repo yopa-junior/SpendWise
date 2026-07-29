@@ -3,7 +3,18 @@
 from fastapi import FastAPI
 from app.api.v1.router import api_router
 
-app = FastAPI(title="SpendWise API")
+from contextlib import asynccontextmanager
+from app.tasks.scheduler import start_scheduler, scheduler
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    start_scheduler()
+    yield
+    scheduler.shutdown()
+
+
+app = FastAPI(title="SpendWise API", lifespan=lifespan)
 
 app.include_router(api_router, prefix="/api/v1")
 
