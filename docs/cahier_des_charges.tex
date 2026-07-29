@@ -73,6 +73,8 @@ Particuliers souhaitant un suivi budgétaire simplifié et assisté par IA, avec
     \item Module taux de change fonctionnel (synchronisation via API externe, conversion entre devises).
     \item Module dépenses entièrement fonctionnel (création avec conversion automatique, remboursement du wallet à la suppression, protection des catégories utilisées).
     \item Module budgets entièrement fonctionnel (budgets par catégorie ou globaux, calcul dynamique de la période en cours, calcul de progression avec seuils d'alerte à 80\% et 100\%).
+    \item Module statistiques entièrement fonctionnel (répartition par catégorie, évolution mensuelle, résumé comparatif à la période précédente).
+    \item Module notifications entièrement fonctionnel (stockage in-app, détection automatique des franchissements de seuil de budget avec protection anti-spam par période).
     \item Base de données PostgreSQL structurée avec migrations Alembic versionnées.
 \end{itemize}
 
@@ -160,8 +162,13 @@ RAPPEL (id_rappel PK, id_utilisateur FK -> UTILISATEUR,
         frequence [mensuel/hebdo/personnalise], jour_du_mois,
         prochaine_echeance, actif BOOLEAN, canal [push/email/sms])
 
-NOTIFICATION (id_notification PK, id_utilisateur FK -> UTILISATEUR,
-              type, message, lu BOOLEAN, date)
+NOTIFICATION (id_notification PK, id_utilisateur FK -> UTILISATEUR ON DELETE CASCADE,
+              type [budget_seuil_80/budget_seuil_100/rappel_facture/resume_mensuel/systeme],
+              titre, message, reference_id NULLABLE, lu BOOLEAN, date)
+
+BUDGET_NOTIFICATION_LOG (id PK, id_budget FK -> BUDGET ON DELETE CASCADE,
+                          seuil_type, periode_debut, created_at,
+                          UNIQUE(id_budget, seuil_type, periode_debut))
 
 CONVERSATION_IA (id_conversation PK, id_utilisateur FK -> UTILISATEUR, date_creation)
 
@@ -337,6 +344,35 @@ Pour un budget donné, l'ensemble des dépenses concernées sur la période en c
 
 \subsection{Point d'extension pour les notifications}
 Le calcul des seuils est conçu comme un point d'extension réutilisable : le futur module de notifications s'appuiera directement sur ce même calcul pour déclencher des alertes, sans duplication de logique métier.
+
+\section{Système de statistiques (implémenté)}
+
+\subsection{Principe général}
+Ce module n'introduit aucune nouvelle table : il agrège les données déjà existantes (dépenses, catégories) pour produire des vues exploitables par le frontend sous forme de graphiques.
+
+\subsection{Devise de référence}
+Toute agrégation nécessite une devise commune. Par défaut, la devise préférée de l'utilisateur est utilisée ; elle peut être explicitement surchargée à chaque appel. Si aucune des deux n'est disponible, une erreur explicite est renvoyée plutôt que d'utiliser une devise arbitraire.
+
+\subsection{Statistiques disponibles}
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Répartition par catégorie} : montant total et pourcentage par catégorie sur une période donnée, triés par montant décroissant.
+    \item \textbf{Évolution mensuelle} : total dépensé pour chaque mois d'une année donnée, y compris les mois sans dépense (valeur nulle).
+    \item \textbf{Résumé comparatif} : total de la période, comparaison automatique à une période précédente de durée identique, et identification de la catégorie la plus coûteuse.
+\end{itemize}
+
+\section{Système de notifications (implémenté)}
+
+\subsection{Principe général}
+Les notifications sont stockées en base pour un affichage in-app, avec un statut lu/non lu. Ce module constitue la fondation sur laquelle s'appuieront les futurs canaux d'envoi actifs (push, email).
+
+\subsection{Détection automatique des seuils de budget}
+Après chaque création de dépense, tous les budgets concernés par sa catégorie (y compris les budgets globaux) sont réévalués. Si un seuil de 80\% ou 100\% vient d'être franchi, une notification est créée automatiquement.
+
+\subsection{Protection anti-spam}
+Une table de suivi dédiée enregistre, pour chaque budget, quel seuil a déjà été notifié pour quelle période. Un même seuil n'est jamais notifié deux fois pour une même période, même si l'utilisateur multiplie les dépenses tant que le seuil reste franchi. Si un cumul dépasse directement 100\% sans notification préalable à 80\%, seul le seuil le plus élevé atteint est notifié, pour éviter une double alerte sur un même événement.
+
+\subsection{Évolution prévue}
+L'envoi actif (push via Firebase Cloud Messaging, email) viendra se greffer sur ce système de stockage existant sans nécessiter de refonte, de même que les rappels de factures récurrentes et les résumés mensuels automatiques.
 
 \section{Fonctionnalités détaillées (périmètre complet du produit)}
 
