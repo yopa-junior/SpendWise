@@ -26,3 +26,15 @@ async def suggest_category(
         return None  # IA indisponible ou incertaine : le frontend affiche la sélection manuelle
 
     return CategorySuggestionResponse(**result)
+
+from app.schemas.ai import ChatRequest, ChatResponse
+
+@router.post("/chat", response_model=ChatResponse)
+async def chat(
+    data: ChatRequest,
+    session: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_verified_user),
+):
+    service = AIService(session)
+    reponse = await service.ask_chatbot(current_user.id, data.question)
+    return ChatResponse(reponse=reponse)
