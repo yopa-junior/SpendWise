@@ -15,6 +15,7 @@ from app.services.exchange_rate_service import ExchangeRateService
 from app.schemas.expense import ExpenseCreate, ExpenseUpdate
 from app.exceptions.expense_exceptions import ExpenseNotFoundException
 from app.exceptions.category_exceptions import CategoryNotFoundException
+from app.services.budget_alert_service import BudgetAlertService
 
 
 class ExpenseService:
@@ -65,6 +66,10 @@ class ExpenseService:
             reference=f"Dépense: {data.description or category.nom}",
             expense_id=expense.id,
         )
+
+        # Vérifie si cette dépense fait franchir un seuil de budget, et notifie si besoin
+        alert_service = BudgetAlertService(self.session)
+        await alert_service.check_budgets_for_category(user_id, data.category_id)
 
         return expense
 

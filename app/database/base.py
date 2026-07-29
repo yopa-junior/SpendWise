@@ -22,4 +22,6 @@ from app.models import (  # noqa: E402, F401
     exchange_rate,
     expense,
     budget,
+    notification,
+    budget_notification_log,
 )
