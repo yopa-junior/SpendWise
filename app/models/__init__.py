@@ -12,6 +12,7 @@ from app.models.expense import Expense
 from app.models.budget import Budget
 from app.models.notification import Notification
 from app.models.budget_notification_log import BudgetNotificationLog
+from app.models.ai_usage_log import AIUsageLog
 
 __all__ = [
     "User",
@@ -26,4 +27,5 @@ __all__ = [
     "Budget",
     "Notification",
     "BudgetNotificationLog",
+    "AIUsageLog",
 ]
