@@ -75,6 +75,7 @@ Particuliers souhaitant un suivi budgétaire simplifié et assisté par IA, avec
     \item Module budgets entièrement fonctionnel (budgets par catégorie ou globaux, calcul dynamique de la période en cours, calcul de progression avec seuils d'alerte à 80\% et 100\%).
     \item Module statistiques entièrement fonctionnel (répartition par catégorie, évolution mensuelle, résumé comparatif à la période précédente).
     \item Module notifications entièrement fonctionnel (stockage in-app, détection automatique des franchissements de seuil de budget avec protection anti-spam par période).
+    \item Module intelligence artificielle entièrement fonctionnel (catégorisation automatique via Gemini avec cache et quota, chatbot conversationnel à détection d'intention s'appuyant sur les calculs exacts des services existants).
     \item Base de données PostgreSQL structurée avec migrations Alembic versionnées.
 \end{itemize}
 
@@ -104,7 +105,7 @@ Particuliers souhaitant un suivi budgétaire simplifié et assisté par IA, avec
 \begin{itemize}[leftmargin=*]
     \item Support multi-devises avec conversion pour l'agrégation des statistiques.
     \item Version gratuite au lancement (monétisation freemium envisagée en V2).
-    \item Utilisation d'une API IA externe (Claude ou OpenAI), jamais appelée directement depuis le client.
+    \item Utilisation de l'API Google Gemini, jamais appelée directement depuis le client.
     \item Fonctionnement partiel hors-ligne sur mobile (contexte de coupures réseau fréquentes).
     \item La connexion est strictement bloquée tant que l'adresse email n'est pas vérifiée.
 \end{itemize}
@@ -169,6 +170,10 @@ NOTIFICATION (id_notification PK, id_utilisateur FK -> UTILISATEUR ON DELETE CAS
 BUDGET_NOTIFICATION_LOG (id PK, id_budget FK -> BUDGET ON DELETE CASCADE,
                           seuil_type, periode_debut, created_at,
                           UNIQUE(id_budget, seuil_type, periode_debut))
+
+AI_USAGE_LOG (id PK, id_utilisateur FK -> UTILISATEUR ON DELETE CASCADE,
+              date_jour, nombre_appels, updated_at,
+              UNIQUE(id_utilisateur, date_jour))
 
 CONVERSATION_IA (id_conversation PK, id_utilisateur FK -> UTILISATEUR, date_creation)
 
@@ -387,23 +392,29 @@ L'envoi actif (push via Firebase Cloud Messaging, email) viendra se greffer sur 
     \item \textbf{Multi-devises} : saisie et conversion transparente pour les statistiques.
 \end{itemize}
 
-\section{Spécifications de l'intelligence artificielle (à implémenter)}
+\section{Système d'intelligence artificielle (implémenté)}
+
+\subsection{Choix technologique}
+Le fournisseur retenu est Google Gemini (modèle \texttt{gemini-flash-latest}), pour son niveau gratuit généreux (environ 1500 requêtes par jour, aucune carte bancaire requise), particulièrement adapté à un projet en phase de développement et de démonstration. L'utilisation d'un alias de modèle plutôt qu'une version figée évite d'avoir à maintenir manuellement le nom du modèle à chaque nouvelle génération.
+
+\subsection{Principe fondamental : le calcul reste toujours du côté du backend}
+Aucune fonctionnalité IA de l'application ne délègue de calcul numérique au modèle de langage. L'intelligence artificielle est utilisée exclusivement pour classer une intention ou reformuler un résultat déjà calculé de façon exacte par les services métier existants, jamais pour produire elle-même un chiffre.
 
 \subsection{Catégorisation automatique}
-Le backend transmet la description et le montant d'une dépense à l'API IA, qui retourne une catégorie suggérée avec un score de confiance. L'utilisateur peut toujours corriger manuellement la suggestion.
+Sur demande explicite de l'utilisateur (action volontaire, non déclenchée automatiquement), le système propose une catégorie pour une dépense à partir de sa description. La réponse de l'IA est systématiquement validée contre la liste réelle des catégories de l'utilisateur ; toute suggestion ne correspondant pas exactement à une catégorie existante est rejetée. Un cache mémoire évite de répéter un appel pour une description déjà rencontrée.
 
 \subsection{Chatbot conversationnel}
-Le backend interroge d'abord la base de données pour obtenir les agrégats nécessaires, puis transmet ces données déjà calculées à l'IA, qui formule la réponse en langage naturel.
+Le chatbot fonctionne en deux temps : une première requête à l'IA classe la question de l'utilisateur parmi un ensemble fermé d'intentions reconnues et en extrait les paramètres pertinents (catégorie et période mentionnées) ; le backend exécute ensuite lui-même le calcul exact correspondant via les services de statistiques et de budgets déjà existants ; une seconde requête à l'IA ne sert qu'à formuler une réponse naturelle à partir de ce résultat déjà calculé.
 
-\subsection{Analyse budgétaire et détection d'anomalies}
-Un traitement mensuel différé envoie un résumé agrégé des dépenses à l'IA, qui retourne des observations textuelles utilisées dans le résumé mensuel automatique.
+\subsection{Gestion des questions hors périmètre}
+Deux cas sont distingués : une question financière légitime mais non couverte par les intentions reconnues reçoit une réponse invitant à consulter les statistiques détaillées de l'application ; une question sans rapport avec les finances personnelles reçoit un message de recadrage rappelant le rôle du chatbot, sans jamais tenter d'y répondre.
 
-\subsection{Gestion des coûts et de la fiabilité}
+\subsection{Fiabilité et maîtrise des coûts}
 \begin{itemize}[leftmargin=*]
-    \item Mise en cache des réponses de catégorisation pour des descriptions similaires.
-    \item Fallback manuel systématique en cas d'indisponibilité de l'API IA.
-    \item Limite d'appels quotidiens par utilisateur pour le chatbot.
-    \item Timeout court (3 à 5 secondes) avec réponse dégradée en cas de lenteur.
+    \item Délai d'attente maximal appliqué à chaque appel IA, avec réponse de repli en cas de dépassement.
+    \item Extraction robuste du JSON de réponse, tolérante aux formats de sortie variables du modèle.
+    \item Quota quotidien d'appels IA par utilisateur, partagé entre catégorisation et chatbot.
+    \item Aucune fonctionnalité cœur de l'application n'est jamais bloquée par une indisponibilité de l'IA.
 \end{itemize}
 
 \section{Architecture technique}
@@ -421,7 +432,7 @@ Flutter, avec Riverpod pour la gestion d'état et fl\_chart pour les graphiques 
 Next.js (React + TypeScript), avec Recharts ou Chart.js pour les graphiques, TailwindCSS pour le style.
 
 \subsection{Intégration IA}
-Toute communication avec l'API IA (Claude ou OpenAI) transite exclusivement par le backend ; la clé API n'est jamais exposée côté client.
+Toute communication avec l'API Google Gemini transite exclusivement par le backend ; la clé API n'est jamais exposée côté client.
 
 \subsection{Emailing}
 Envoi via SMTP (compte Gmail applicatif dédié), bibliothèque \texttt{fastapi-mail}, templates HTML avec Jinja2.
