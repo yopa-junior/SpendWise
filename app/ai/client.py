@@ -1,6 +1,7 @@
 # app/ai/client.py
 
 import json
+import re
 import asyncio
 from google import genai
 
@@ -9,12 +10,23 @@ from app.core.config import settings
 client = genai.Client(api_key=settings.GEMINI_API_KEY)
 
 MODEL_NAME = "gemini-flash-latest"
-TIMEOUT_SECONDS = 5.0
+TIMEOUT_SECONDS = 12.0
 
 
 class AIServiceError(Exception):
     """Levée quand l'appel IA échoue ou renvoie un format invalide."""
     pass
+
+
+def _extract_json(raw_text: str) -> str:
+    """
+    Extrait le premier objet JSON valide trouvé dans le texte,
+    peu importe le texte ou les balises markdown qui l'entourent.
+    """
+    match = re.search(r"\{.*\}", raw_text, re.DOTALL)
+    if match is None:
+        raise json.JSONDecodeError("Aucun objet JSON trouvé dans la réponse", raw_text, 0)
+    return match.group(0)
 
 
 async def call_gemini_json(system_prompt: str, user_message: str) -> dict:
@@ -32,12 +44,8 @@ async def call_gemini_json(system_prompt: str, user_message: str) -> dict:
             timeout=TIMEOUT_SECONDS,
         )
         raw_text = response.text.strip()
-
-        # Nettoyage défensif : Gemini peut parfois entourer le JSON de balises markdown
-        if raw_text.startswith("```"):
-            raw_text = raw_text.strip("`").removeprefix("json").strip()
-
-        return json.loads(raw_text)
+        json_text = _extract_json(raw_text)
+        return json.loads(json_text)
 
     except asyncio.TimeoutError as e:
         raise AIServiceError("Délai d'attente dépassé pour la réponse IA") from e
