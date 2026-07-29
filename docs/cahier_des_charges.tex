@@ -76,8 +76,13 @@ Particuliers souhaitant un suivi budgétaire simplifié et assisté par IA, avec
     \item Module statistiques entièrement fonctionnel (répartition par catégorie, évolution mensuelle, résumé comparatif à la période précédente).
     \item Module notifications entièrement fonctionnel (stockage in-app, détection automatique des franchissements de seuil de budget avec protection anti-spam par période).
     \item Module intelligence artificielle entièrement fonctionnel (catégorisation automatique via Gemini avec cache et quota, chatbot conversationnel à détection d'intention s'appuyant sur les calculs exacts des services existants).
+    \item Module de résumés mensuels automatiques fonctionnel (génération planifiée via tâche récurrente, notification in-app et envoi par email, endpoint de déclenchement manuel pour test).
+    \item Module de rappels de factures récurrentes fonctionnel (vérification quotidienne automatique, double canal notification in-app et email).
     \item Base de données PostgreSQL structurée avec migrations Alembic versionnées.
 \end{itemize}
+
+\subsection{Périmètre fonctionnel du cahier des charges initial}
+L'ensemble des modules métier définis dans ce document sont désormais implémentés et testés. Les prochaines étapes du projet portent sur la couverture par tests automatisés et le développement des applications clientes mobile et web.
 
 \section{Analyse des besoins}
 
@@ -158,10 +163,10 @@ BUDGET (id_budget PK, id_utilisateur FK -> UTILISATEUR ON DELETE CASCADE,
         montant_limite NUMERIC(15,2), devise FK -> DEVISE,
         periode [hebdomadaire/mensuel], date_debut, created_at, updated_at)
 
-RAPPEL (id_rappel PK, id_utilisateur FK -> UTILISATEUR,
+RAPPEL (id_rappel PK, id_utilisateur FK -> UTILISATEUR ON DELETE CASCADE,
         id_categorie FK -> CATEGORIE NULLABLE, libelle,
-        frequence [mensuel/hebdo/personnalise], jour_du_mois,
-        prochaine_echeance, actif BOOLEAN, canal [push/email/sms])
+        frequence [mensuel/hebdomadaire], jour_echeance,
+        actif BOOLEAN, derniere_notification NULLABLE, created_at)
 
 NOTIFICATION (id_notification PK, id_utilisateur FK -> UTILISATEUR ON DELETE CASCADE,
               type [budget_seuil_80/budget_seuil_100/rappel_facture/resume_mensuel/systeme],
@@ -469,6 +474,37 @@ Architecture backend stateless, base de données indexée sur les identifiants u
 
 \subsection{Conformité}
 Politique de confidentialité claire concernant l'usage des données financières par l'intelligence artificielle.
+
+\section{Système de résumés mensuels (implémenté)}
+
+\subsection{Principe général}
+Une tâche planifiée s'exécute automatiquement le premier jour de chaque mois et génère, pour chaque utilisateur actif et vérifié, un résumé financier du mois qui vient de se terminer.
+
+\subsection{Choix technique du déclencheur}
+APScheduler a été retenu plutôt qu'une solution de type Celery/Redis, pour sa simplicité d'intégration directe dans le processus de l'application, sans infrastructure supplémentaire à maintenir. Ce choix reste cohérent avec le volume d'utilisateurs actuel du projet ; une migration vers une solution plus distribuée reste possible sans remise en cause de la logique métier, si la croissance de l'application le justifie plus tard.
+
+\subsection{Contenu du résumé}
+Le résumé réutilise entièrement le service de statistiques déjà existant : total dépensé sur le mois, comparaison au mois précédent, catégorie la plus coûteuse. Aucune nouvelle logique de calcul n'a été nécessaire.
+
+\subsection{Double canal de diffusion}
+Le résumé est à la fois enregistré comme notification in-app et envoyé par email, réutilisant l'infrastructure d'envoi déjà mise en place dès la configuration initiale du projet.
+
+\subsection{Robustesse}
+La génération est isolée par utilisateur : l'échec de génération pour un utilisateur (adresse email invalide, absence de devise préférée) n'interrompt jamais le traitement des autres utilisateurs. Les utilisateurs sans dépense sur la période ne reçoivent aucun résumé, pour éviter un envoi dénué de valeur informative.
+
+\section{Système de rappels de factures récurrentes (implémenté)}
+
+\subsection{Principe général}
+Un rappel définit une échéance récurrente (mensuelle ou hebdomadaire) pour laquelle l'utilisateur souhaite être prévenu à l'avance, typiquement pour des factures régulières comme l'eau, l'électricité ou le loyer.
+
+\subsection{Choix de conception : double canal systématique}
+Contrairement à la prévision initiale d'un champ de canal sélectionnable (push, email, SMS), la décision retenue est d'envoyer systématiquement une notification in-app et un email à chaque échéance, sans champ de sélection. Les canaux push et SMS nécessitant une infrastructure non encore mise en place (Firebase Cloud Messaging, service SMS tiers), leur introduction future n'imposera pas de remise en cause du modèle de données actuel.
+
+\subsection{Détection des échéances dues}
+Une tâche planifiée quotidienne vérifie l'ensemble des rappels actifs et détecte ceux dont le jour d'échéance correspond au jour courant, qu'il s'agisse d'un jour du mois ou d'un jour de la semaine selon la fréquence choisie.
+
+\subsection{Protection contre les notifications répétées}
+Un simple marqueur de dernière notification sur chaque rappel suffit à garantir qu'une même échéance n'est jamais notifiée plus d'une fois le même jour, sans nécessiter de table de suivi séparée comme pour les seuils de budget, la nature de l'échéance ne comportant pas de période à distinguer.
 
 \section{Conclusion}
 Ce cahier des charges définit le périmètre fonctionnel, technique et organisationnel d'une application de gestion des dépenses intégrant l'intelligence artificielle. Les fondations techniques critiques (authentification sécurisée, vérification d'identité) sont désormais implémentées et testées. Il constitue la base de référence pour la poursuite du développement des modules métier (dépenses, wallets, budgets) et de l'intégration de l'intelligence artificielle.

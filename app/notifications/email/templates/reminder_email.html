@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+</head>
+<body style="margin:0; padding:0; background-color:#f4f6f8; font-family: Arial, sans-serif;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f6f8; padding: 40px 0;">
+        <tr>
+            <td align="center">
+                <table role="presentation" width="480" cellpadding="0" cellspacing="0" style="background-color:#ffffff; border-radius:12px; overflow:hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
+
+                    <!-- En-tête -->
+                    <tr>
+                        <td style="background-color:#0891b2; padding: 32px 24px; text-align:center;">
+                            <div style="font-size: 36px; margin-bottom: 8px;">🔔</div>
+                            <h1 style="color:#ffffff; margin:0; font-size:22px;">Rappel de facture</h1>
+                        </td>
+                    </tr>
+
+                    <!-- Contenu -->
+                    <tr>
+                        <td style="padding: 32px 24px; color:#333333; line-height:1.6;">
+                            <p style="font-size:16px;">Bonjour {{ nom }},</p>
+                            <p style="font-size:16px;">
+                                Petit rappel : ta facture <strong>{{ libelle }}</strong> est prévue aujourd'hui.
+                            </p>
+
+                            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin: 24px 0;">
+                                <tr>
+                                    <td style="background-color:#f4f6f8; border-left: 4px solid #0891b2; border-radius:6px; padding: 16px;">
+                                        <span style="font-size:15px; color:#555;">📌 {{ libelle }}</span>
+                                    </td>
+                                </tr>
+                            </table>
+
+                            <p style="font-size:14px; color:#777777;">
+                                Connecte-toi à SpendWise pour enregistrer cette dépense une fois réglée.
+                            </p>
+                        </td>
+                    </tr>
+
+                    <!-- Footer -->
+                    <tr>
+                        <td style="padding: 16px 24px; background-color:#f9fafb; text-align:center; font-size:12px; color:#999999;">
+                            SpendWise — Gestion de dépenses intelligente
+                        </td>
+                    </tr>
+
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>

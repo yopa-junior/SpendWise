@@ -10,6 +10,7 @@ from app.api.v1 import auth, wallets, categories, users, expenses, budgets, stat
 from app.api.v1 import auth, wallets, categories, users, expenses, budgets, statistics, notifications
 from app.api.v1 import auth, wallets, categories, users, expenses, budgets, statistics, notifications, ai
 from app.api.v1 import auth, wallets, categories, users, expenses, budgets, statistics, notifications, ai, reports
+from app.api.v1 import auth, wallets, categories, users, expenses, budgets, statistics, notifications, ai, reports, reminders
 
 
 api_router = APIRouter()
@@ -23,3 +24,4 @@ api_router.include_router(statistics.router)
 api_router.include_router(notifications.router)
 api_router.include_router(ai.router)
 api_router.include_router(reports.router)
+api_router.include_router(reminders.router)

@@ -25,4 +25,5 @@ from app.models import (  # noqa: E402, F401
     notification,
     budget_notification_log,
     ai_usage_log,
+    reminder,
 )

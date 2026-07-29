@@ -28,11 +28,13 @@ Toutes les requêtes et réponses sont au format JSON (`Content-Type: applicatio
 18. [Statistiques](#18-statistiques)
 19. [Notifications](#19-notifications)
 20. [Intelligence Artificielle](#20-intelligence-artificielle)
-21. [Authentification sur les routes protégées](#21-authentification-sur-les-routes-protégées)
-22. [Codes d'erreur globaux](#22-codes-derreur-globaux)
-23. [Devises disponibles](#23-devises-disponibles)
-24. [Icônes et couleurs de catégories disponibles](#24-icônes-et-couleurs-de-catégories-disponibles)
-25. [Guide de test rapide (curl)](#25-guide-de-test-rapide-curl)
+21. [Rapports mensuels](#21-rapports-mensuels)
+22. [Rappels de factures](#22-rappels-de-factures)
+23. [Authentification sur les routes protégées](#23-authentification-sur-les-routes-protégées)
+24. [Codes d'erreur globaux](#24-codes-derreur-globaux)
+25. [Devises disponibles](#25-devises-disponibles)
+26. [Icônes et couleurs de catégories disponibles](#26-icônes-et-couleurs-de-catégories-disponibles)
+27. [Guide de test rapide (curl)](#27-guide-de-test-rapide-curl)
 
 ---
 
@@ -901,7 +903,101 @@ Périodes reconnues dans la question : "ce mois-ci" (par défaut), "le mois dern
 
 ---
 
-## 21. Authentification sur les routes protégées
+## 21. Rapports mensuels
+
+🔒 Nécessite un `access_token` valide **et** un compte avec email vérifié.
+
+### 21.1 Génération automatique
+
+Une tâche planifiée s'exécute automatiquement le 1er de chaque mois à 6h du matin, pour tous les utilisateurs actifs et vérifiés. Aucune action requise côté frontend pour ce déclenchement — il est entièrement géré côté serveur.
+
+### 21.2 Déclenchement manuel (test)
+
+**`POST /reports/generate-my-report`**
+
+Génère immédiatement le résumé du mois précédent pour l'utilisateur connecté, sans attendre le déclenchement automatique. Utile pour tester ou pour un bouton "Renvoyer mon résumé" côté frontend.
+
+Réponse — `200 OK` :
+```json
+{
+  "message": "Résumé généré et envoyé si des dépenses existaient le mois précédent"
+}
+```
+
+⚠️ Ce message est volontairement neutre : si l'utilisateur n'avait aucune dépense sur le mois précédent, aucun résumé n'est généré ni envoyé, sans que cela soit considéré comme une erreur.
+
+### Où consulter le résultat
+
+- **Notification in-app** : `GET /notifications`, chercher `"type": "resume_mensuel"`
+- **Email** : envoyé à l'adresse du compte, sujet "Ton résumé SpendWise de [mois]"
+
+---
+
+## 22. Rappels de factures
+
+🔒 Toutes les routes nécessitent un `access_token` valide **et** un compte avec email vérifié (sauf `check-now`, technique).
+
+### 22.1 Créer un rappel
+
+**`POST /reminders`**
+
+```json
+{
+  "category_id": "uuid_ou_null",
+  "libelle": "Facture Eneo",
+  "frequence": "mensuel",
+  "jour_echeance": 15
+}
+```
+
+- `frequence` : `"mensuel"` (alors `jour_echeance` entre 1 et 31) ou `"hebdomadaire"` (alors `jour_echeance` entre 0=lundi et 6=dimanche)
+- `category_id` optionnel, pour lier le rappel à une catégorie de dépense existante
+
+### 22.2 Lister les rappels
+
+**`GET /reminders`**
+
+### 22.3 Modifier un rappel
+
+**`PATCH /reminders/{reminder_id}`**
+```json
+{
+  "actif": false
+}
+```
+
+Permet notamment de désactiver temporairement un rappel sans le supprimer.
+
+### 22.4 Supprimer un rappel
+
+**`DELETE /reminders/{reminder_id}`** → `204 No Content`
+
+### 22.5 Vérification manuelle (test)
+
+**`POST /reminders/check-now`**
+
+Déclenche immédiatement la vérification des échéances du jour, sans attendre l'exécution automatique quotidienne (7h du matin).
+
+Réponse — `200 OK` :
+```json
+{"message": "1 rappel(s) notifié(s)"}
+```
+
+### Où consulter le résultat
+
+- **Notification in-app** : `GET /notifications`, chercher `"type": "rappel_facture"`
+- **Email** : sujet "Rappel SpendWise : [libellé]"
+
+### Erreurs communes
+
+| Code | Cas |
+|---|---|
+| `404 Not Found` | Rappel introuvable ou n'appartenant pas à l'utilisateur |
+| `422 Unprocessable Entity` | `jour_echeance` incohérent avec la fréquence choisie |
+
+---
+
+## 23. Authentification sur les routes protégées
 
 Pour toute route marquée 🔒, ajoute ce header à la requête :
 
@@ -930,7 +1026,7 @@ final response = await dio.get(
 
 ---
 
-## 22. Codes d'erreur globaux
+## 24. Codes d'erreur globaux
 
 Toutes les erreurs suivent le format standard FastAPI :
 
@@ -968,7 +1064,7 @@ Sauf les erreurs de validation (`422`), qui suivent le format Pydantic :
 
 ---
 
-## 23. Devises disponibles
+## 25. Devises disponibles
 
 Actuellement en base (table `devises`) :
 
@@ -984,7 +1080,7 @@ Actuellement en base (table `devises`) :
 
 ---
 
-## 24. Icônes et couleurs de catégories disponibles
+## 26. Icônes et couleurs de catégories disponibles
 
 ### Icônes valides (`icone`)
 
@@ -1013,7 +1109,7 @@ Alimentation, Transport, Logement, Santé, Éducation, Loisirs, Shopping, Factur
 
 ---
 
-## 25. Guide de test rapide (curl)
+## 27. Guide de test rapide (curl)
 
 ```bash
 # 1. Inscription
