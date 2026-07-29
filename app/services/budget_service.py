@@ -27,10 +27,6 @@ def _add_months(d: date, months: int) -> date:
 
 
 def compute_current_period(date_debut: date, periode: BudgetPeriod, reference: date | None = None) -> tuple[date, date]:
-    """
-    Calcule la fenêtre de la période en cours (début inclus, fin incluse),
-    à partir de la date de départ du budget et de la date de référence (aujourd'hui par défaut).
-    """
     reference = reference or date.today()
 
     if periode == BudgetPeriod.HEBDOMADAIRE:
@@ -40,11 +36,14 @@ def compute_current_period(date_debut: date, periode: BudgetPeriod, reference: d
         fin_periode = debut_periode + timedelta_days(6)
         return debut_periode, fin_periode
 
-    # Mensuel
+    # Mensuel : on compare le PREMIER JOUR de chaque mois suivant, pas le jour d'échéance lui-même
     mois_ecoules = 0
-    curseur = date_debut
-    while _add_months(date_debut, mois_ecoules + 1) <= reference:
+    while True:
+        premier_jour_mois_suivant = _add_months(date_debut.replace(day=1), mois_ecoules + 1)
+        if premier_jour_mois_suivant > reference:
+            break
         mois_ecoules += 1
+
     debut_periode = _add_months(date_debut, mois_ecoules)
     fin_periode = _add_months(date_debut, mois_ecoules + 1)
     from datetime import timedelta
