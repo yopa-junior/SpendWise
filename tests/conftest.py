@@ -1,6 +1,5 @@
 # tests/conftest.py
 
-import asyncio
 import uuid
 from datetime import datetime, timezone
 
@@ -8,6 +7,7 @@ import pytest
 import pytest_asyncio
 from httpx import AsyncClient, ASGITransport
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
+from sqlalchemy.pool import NullPool
 
 from app.main import app
 from app.database.base import Base
@@ -18,21 +18,24 @@ from app.models.currency import Devise
 
 TEST_DATABASE_URL = "postgresql+asyncpg://spendwise:mathis2025@localhost:5432/spendwise_test_db"
 
-test_engine = create_async_engine(TEST_DATABASE_URL, echo=False)
-TestSessionLocal = async_sessionmaker(bind=test_engine, expire_on_commit=False)
-
 
 @pytest_asyncio.fixture(scope="function")
 async def db_session():
-    """Crée toutes les tables, fournit une session, puis nettoie après chaque test."""
-    async with test_engine.begin() as conn:
+    """Crée un moteur neuf par test (évite la réutilisation de connexion entre boucles asyncio),
+    crée toutes les tables, fournit une session, puis nettoie et dispose le moteur après chaque test."""
+    engine = create_async_engine(TEST_DATABASE_URL, echo=False, poolclass=NullPool)
+
+    async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
-    async with TestSessionLocal() as session:
+    session_maker = async_sessionmaker(bind=engine, expire_on_commit=False)
+    async with session_maker() as session:
         yield session
 
-    async with test_engine.begin() as conn:
+    async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
+
+    await engine.dispose()
 
 
 @pytest_asyncio.fixture(scope="function")
@@ -78,7 +81,7 @@ async def verified_user(db_session, devise_xaf):
         langue_preferee=LanguePreferee.FR,
         is_active=True,
         is_verified=True,
-        created_at=datetime.now(timezone.utc),
+        date_creation=datetime.now(timezone.utc),
         updated_at=datetime.now(timezone.utc),
     )
     db_session.add(user)
