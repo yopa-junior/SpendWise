@@ -8,6 +8,7 @@ from app.api.v1 import auth, wallets, categories, users, expenses
 from app.api.v1 import auth, wallets, categories, users, expenses, budgets
 from app.api.v1 import auth, wallets, categories, users, expenses, budgets, statistics
 from app.api.v1 import auth, wallets, categories, users, expenses, budgets, statistics, notifications
+from app.api.v1 import auth, wallets, categories, users, expenses, budgets, statistics, notifications, ai
 
 
 
@@ -20,3 +21,4 @@ api_router.include_router(expenses.router)
 api_router.include_router(budgets.router)
 api_router.include_router(statistics.router)
 api_router.include_router(notifications.router)
+api_router.include_router(ai.router)
