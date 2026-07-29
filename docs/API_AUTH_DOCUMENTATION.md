@@ -27,11 +27,12 @@ Toutes les requêtes et réponses sont au format JSON (`Content-Type: applicatio
 17. [Budgets](#17-budgets)
 18. [Statistiques](#18-statistiques)
 19. [Notifications](#19-notifications)
-20. [Authentification sur les routes protégées](#20-authentification-sur-les-routes-protégées)
-21. [Codes d'erreur globaux](#21-codes-derreur-globaux)
-22. [Devises disponibles](#22-devises-disponibles)
-23. [Icônes et couleurs de catégories disponibles](#23-icônes-et-couleurs-de-catégories-disponibles)
-24. [Guide de test rapide (curl)](#24-guide-de-test-rapide-curl)
+20. [Intelligence Artificielle](#20-intelligence-artificielle)
+21. [Authentification sur les routes protégées](#21-authentification-sur-les-routes-protégées)
+22. [Codes d'erreur globaux](#22-codes-derreur-globaux)
+23. [Devises disponibles](#23-devises-disponibles)
+24. [Icônes et couleurs de catégories disponibles](#24-icônes-et-couleurs-de-catégories-disponibles)
+25. [Guide de test rapide (curl)](#25-guide-de-test-rapide-curl)
 
 ---
 
@@ -825,7 +826,82 @@ Réponse — `200 OK` :
 
 ---
 
-## 20. Authentification sur les routes protégées
+## 20. Intelligence Artificielle
+
+🔒 Toutes les routes nécessitent un `access_token` valide **et** un compte avec email vérifié.
+
+⚠️ Toutes les routes de cette section partagent un **quota quotidien de 50 appels par utilisateur**, réinitialisé chaque jour.
+
+### 20.1 Suggérer une catégorie pour une dépense
+
+**`POST /ai/suggest-category`**
+
+```json
+{
+  "description": "Facture Eneo électricité"
+}
+```
+
+Réponse succès — `200 OK` :
+```json
+{
+  "category_id": "uuid",
+  "category_nom": "Factures",
+  "confiance": 0.98
+}
+```
+
+Si l'IA est indisponible, incertaine, ou hallucine une catégorie inexistante — `200 OK` avec corps `null` :
+```json
+null
+```
+
+**Recommandation frontend** : si la réponse est `null`, afficher simplement le sélecteur de catégorie manuel, sans message d'erreur alarmant — c'est un comportement normal et attendu.
+
+### 20.2 Poser une question au chatbot financier
+
+**`POST /ai/chat`**
+
+```json
+{
+  "question": "Combien j'ai dépensé en alimentation ce mois-ci ?"
+}
+```
+
+Réponse — `200 OK` :
+```json
+{
+  "reponse": "Ce mois-ci, tu as dépensé 42000 XAF en Alimentation."
+}
+```
+
+### Exemples de questions reconnues
+
+| Type de question | Exemple |
+|---|---|
+| Total par catégorie | "Combien j'ai dépensé en transport ce mois-ci ?" |
+| Total général | "Combien j'ai dépensé au total ce mois-ci ?" |
+| Catégorie principale | "Quelle est ma plus grosse dépense ce mois-ci ?" |
+| Progression de budget | "Où en suis-je sur mon budget alimentation ?" |
+
+Périodes reconnues dans la question : "ce mois-ci" (par défaut), "le mois dernier", "cette semaine".
+
+### Comportement hors périmètre
+
+- **Question financière non couverte** (ex: "quelle est ma dépense la moins chère ?") → réponse invitant à consulter les statistiques détaillées de l'application.
+- **Question hors sujet** (ex: "quelle est la capitale du Cameroun ?") → réponse de recadrage rappelant que l'assistant ne traite que des finances personnelles, sans jamais répondre à la question hors-sujet elle-même.
+
+### Erreurs communes
+
+| Code | Cas |
+|---|---|
+| `429 Too Many Requests` | Quota quotidien de 50 appels IA atteint |
+
+**Recommandation frontend** : afficher un indicateur de chargement pendant l'appel (peut prendre jusqu'à 10-12 secondes en cas de lenteur du fournisseur IA), et prévoir un état "réessaie plus tard" propre en cas de `429`.
+
+---
+
+## 21. Authentification sur les routes protégées
 
 Pour toute route marquée 🔒, ajoute ce header à la requête :
 
@@ -854,7 +930,7 @@ final response = await dio.get(
 
 ---
 
-## 21. Codes d'erreur globaux
+## 22. Codes d'erreur globaux
 
 Toutes les erreurs suivent le format standard FastAPI :
 
@@ -892,7 +968,7 @@ Sauf les erreurs de validation (`422`), qui suivent le format Pydantic :
 
 ---
 
-## 22. Devises disponibles
+## 23. Devises disponibles
 
 Actuellement en base (table `devises`) :
 
@@ -908,7 +984,7 @@ Actuellement en base (table `devises`) :
 
 ---
 
-## 23. Icônes et couleurs de catégories disponibles
+## 24. Icônes et couleurs de catégories disponibles
 
 ### Icônes valides (`icone`)
 
@@ -937,7 +1013,7 @@ Alimentation, Transport, Logement, Santé, Éducation, Loisirs, Shopping, Factur
 
 ---
 
-## 24. Guide de test rapide (curl)
+## 25. Guide de test rapide (curl)
 
 ```bash
 # 1. Inscription
