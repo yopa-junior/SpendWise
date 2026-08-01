@@ -6,6 +6,8 @@ from datetime import datetime
 from sqlalchemy import String, Numeric, DateTime, ForeignKey, Enum as SQLEnum, Boolean
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy import Date
+from datetime import date
 
 from app.database.base import Base
 
@@ -14,7 +16,7 @@ class WalletType(str, enum.Enum):
     ESPECES = "especes"
     MOBILE_MONEY = "mobile_money"
     BANQUE = "banque"
-
+    EPARGNE = "epargne"
 
 class Wallet(Base):
     __tablename__ = "wallets"
@@ -35,6 +37,9 @@ class Wallet(Base):
     devise: Mapped[str] = mapped_column(
         String(3), ForeignKey("devises.code_devise"), nullable=False
     )
+    
+    montant_cible: Mapped[float | None] = mapped_column(Numeric(15, 2), nullable=True)
+    date_echeance: Mapped["date | None"] = mapped_column(Date, nullable=True)
 
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
