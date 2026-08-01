@@ -15,6 +15,7 @@ from app.schemas.wallet import (
     WalletTransactionResponse,
 )
 from app.services.wallet_service import WalletService
+from app.schemas.wallet import SavingsGoalProgress
 
 router = APIRouter(prefix="/wallets", tags=["Wallets"])
 
@@ -90,3 +91,13 @@ async def get_transaction_history(
 ):
     service = WalletService(session)
     return await service.get_transaction_history(wallet_id, current_user.id)
+
+
+@router.get("/{wallet_id}/savings-progress", response_model=SavingsGoalProgress)
+async def get_savings_progress(
+    wallet_id: uuid.UUID,
+    session: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_verified_user),
+):
+    service = WalletService(session)
+    return await service.get_savings_progress(wallet_id, current_user.id)

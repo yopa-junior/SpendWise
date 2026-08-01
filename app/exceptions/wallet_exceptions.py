@@ -33,3 +33,10 @@ class InvalidCurrencyException(HTTPException):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Devise invalide ou inconnue",
         )
+        
+class SavingsGoalRequiresTargetException(HTTPException):
+    def __init__(self):
+        super().__init__(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Un objectif d'épargne doit avoir un montant cible",
+        )

@@ -16,6 +16,9 @@ from app.exceptions.wallet_exceptions import (
     WalletInactiveException,
     InsufficientBalanceException,
 )
+from app.exceptions.wallet_exceptions import SavingsGoalRequiresTargetException
+from app.schemas.wallet import SavingsGoalProgress
+
 
 
 class WalletService:
@@ -28,19 +31,23 @@ class WalletService:
     # ---------- Création ----------
 
     async def create_wallet(self, user_id: uuid.UUID, data: WalletCreate) -> Wallet:
+        if data.type_wallet == WalletType.EPARGNE and data.montant_cible is None:
+            raise SavingsGoalRequiresTargetException()
+
         wallet = Wallet(
             user_id=user_id,
             nom_wallet=data.nom_wallet,
             type_wallet=data.type_wallet,
             solde=data.solde_initial,
             devise=data.devise,
+            montant_cible=data.montant_cible,
+            date_echeance=data.date_echeance,
             is_active=True,
             created_at=datetime.now(timezone.utc),
             updated_at=datetime.now(timezone.utc),
         )
         wallet = await self.wallet_repo.create(wallet)
 
-        # Si un solde initial est fourni, on trace l'opération comme un premier dépôt
         if data.solde_initial > 0:
             await self._record_transaction(
                 wallet=wallet,
@@ -162,3 +169,21 @@ class WalletService:
             created_at=datetime.now(timezone.utc),
         )
         return await self.transaction_repo.create(transaction)
+    
+    
+    async def get_savings_progress(self, wallet_id: uuid.UUID, user_id: uuid.UUID) -> SavingsGoalProgress:
+        wallet = await self.get_wallet(wallet_id, user_id)
+
+        if wallet.montant_cible is None:
+            raise SavingsGoalRequiresTargetException()
+
+        pourcentage = (wallet.solde / wallet.montant_cible * 100) if wallet.montant_cible > 0 else Decimal("0")
+
+        return SavingsGoalProgress(
+            wallet_id=wallet.id,
+            solde_actuel=wallet.solde,
+            montant_cible=wallet.montant_cible,
+            pourcentage=pourcentage.quantize(Decimal("0.01")),
+            objectif_atteint=pourcentage >= 100,
+            date_echeance=wallet.date_echeance,
+        )
