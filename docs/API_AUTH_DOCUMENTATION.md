@@ -487,12 +487,45 @@ Erreur si solde insuffisant — `400 Bad Request` : `"Solde insuffisant pour eff
 
 Réponse : liste chronologique inversée (plus récent en premier) de chaque dépôt/retrait avec `solde_apres` (montant du solde juste après cette opération).
 
+### 14.8 Objectifs d'épargne
+
+Un objectif d'épargne est un wallet avec `type_wallet: "epargne"`, doté de deux champs supplémentaires.
+
+**Création** — `POST /wallets` :
+```json
+{
+  "nom_wallet": "Voyage à Bali",
+  "type_wallet": "epargne",
+  "solde_initial": 2450,
+  "devise": "XAF",
+  "montant_cible": 5000,
+  "date_echeance": "2026-11-30"
+}
+```
+
+⚠️ `montant_cible` est **obligatoire** pour ce type de wallet — son absence renvoie `422 Unprocessable Entity`. `date_echeance` reste optionnelle.
+
+**Consulter la progression** — `GET /wallets/{wallet_id}/savings-progress` :
+```json
+{
+  "wallet_id": "uuid",
+  "solde_actuel": "2450.00",
+  "montant_cible": "5000.00",
+  "pourcentage": "49.00",
+  "objectif_atteint": false,
+  "date_echeance": "2026-11-30"
+}
+```
+
+Les dépôts/retraits sur un wallet d'épargne utilisent exactement les mêmes routes que tout autre wallet (`/deposit`, `/withdraw`).
+
 ### Erreurs communes à toutes les routes wallet
 
 | Code | Cas |
 |---|---|
 | `404 Not Found` | Wallet introuvable ou n'appartenant pas à l'utilisateur |
 | `400 Bad Request` | Wallet désactivé, ou solde insuffisant |
+| `422 Unprocessable Entity` | Wallet de type épargne créé sans `montant_cible` |
 | `403 Forbidden` | Email non vérifié |
 
 ---
