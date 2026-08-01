@@ -78,6 +78,7 @@ Particuliers souhaitant un suivi budgétaire simplifié et assisté par IA, avec
     \item Module intelligence artificielle entièrement fonctionnel (catégorisation automatique via Gemini avec cache et quota, chatbot conversationnel à détection d'intention s'appuyant sur les calculs exacts des services existants).
     \item Module de résumés mensuels automatiques fonctionnel (génération planifiée via tâche récurrente, notification in-app et envoi par email, endpoint de déclenchement manuel pour test).
     \item Module de rappels de factures récurrentes fonctionnel (vérification quotidienne automatique, double canal notification in-app et email).
+    \item Module objectifs d'épargne fonctionnel (extension du modèle wallet avec montant cible et échéance, calcul de progression).
     \item Base de données PostgreSQL structurée avec migrations Alembic versionnées.
 \end{itemize}
 
@@ -138,9 +139,10 @@ TAUX_CHANGE (id_taux PK, devise_source FK -> DEVISE, devise_cible FK -> DEVISE,
              taux NUMERIC(18,8), date_maj, UNIQUE(devise_source, devise_cible))
 
 WALLET (id_wallet PK, id_utilisateur FK -> UTILISATEUR ON DELETE CASCADE,
-        nom_wallet, type_wallet [especes/mobile_money/banque],
-        solde NUMERIC(15,2), devise FK -> DEVISE, is_active BOOLEAN,
-        created_at, updated_at)
+        nom_wallet, type_wallet [especes/mobile_money/banque/epargne],
+        solde NUMERIC(15,2), devise FK -> DEVISE,
+        montant_cible NUMERIC(15,2) NULLABLE, date_echeance NULLABLE,
+        is_active BOOLEAN, created_at, updated_at)
 
 WALLET_TRANSACTION (id_transaction PK, id_wallet FK -> WALLET ON DELETE CASCADE,
                      type_transaction [depot/retrait/depense],
@@ -505,6 +507,20 @@ Une tâche planifiée quotidienne vérifie l'ensemble des rappels actifs et dét
 
 \subsection{Protection contre les notifications répétées}
 Un simple marqueur de dernière notification sur chaque rappel suffit à garantir qu'une même échéance n'est jamais notifiée plus d'une fois le même jour, sans nécessiter de table de suivi séparée comme pour les seuils de budget, la nature de l'échéance ne comportant pas de période à distinguer.
+
+\section{Système d'objectifs d'épargne (implémenté)}
+
+\subsection{Principe général}
+Un objectif d'épargne permet à l'utilisateur de définir un montant cible à atteindre, avec une échéance optionnelle, pour un projet précis (voyage, achat important, fonds d'urgence).
+
+\subsection{Choix de conception : extension du wallet plutôt que nouvelle entité}
+Plutôt que de créer une table séparée, un objectif d'épargne est un wallet d'un type particulier, disposant de deux champs supplémentaires optionnels : le montant cible et la date d'échéance. Ce choix permet de réutiliser intégralement la logique de dépôt, de retrait et de traçabilité des transactions déjà construite et validée pour les autres types de wallets, sans dupliquer de code.
+
+\subsection{Validation métier}
+Un wallet de type objectif d'épargne doit obligatoirement renseigner un montant cible à sa création ; cette contrainte est vérifiée au niveau du service, en complément de la structure de données qui autorise ce champ à rester vide pour les autres types de wallets.
+
+\subsection{Calcul de progression}
+La progression est calculée comme le rapport entre le solde actuel du wallet et son montant cible, avec un indicateur booléen signalant si l'objectif est atteint, en réutilisant le même principe de calcul que celui des budgets.
 
 \section{Conclusion}
 Ce cahier des charges définit le périmètre fonctionnel, technique et organisationnel d'une application de gestion des dépenses intégrant l'intelligence artificielle. Les fondations techniques critiques (authentification sécurisée, vérification d'identité) sont désormais implémentées et testées. Il constitue la base de référence pour la poursuite du développement des modules métier (dépenses, wallets, budgets) et de l'intégration de l'intelligence artificielle.
