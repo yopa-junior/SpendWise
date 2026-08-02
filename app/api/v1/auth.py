@@ -10,6 +10,12 @@ from app.schemas.user import UserCreate, UserLogin, UserResponse
 from app.schemas.token import Token, RefreshTokenRequest
 from app.services.auth_service import AuthService
 from app.schemas.user import ForgotPasswordRequest, ResetPasswordRequest, ChangePasswordRequest
+from app.schemas.email_verification import (
+    VerifyEmailRequest,
+    ResendOTPRequest,
+    VerifyEmailResponse,
+)
+from app.services.email_verification_service import EmailVerificationService
 
 router = APIRouter(prefix="/auth", tags=["Authentification"])
 
@@ -74,3 +80,15 @@ async def change_password(
 ):
     service = AuthService(session)
     await service.change_password(current_user, data.mot_de_passe_actuel, data.nouveau_mot_de_passe)
+
+@router.post("/verify-email", response_model=VerifyEmailResponse)
+async def verify_email(data: VerifyEmailRequest, session: AsyncSession = Depends(get_db)):
+    service = EmailVerificationService(session)
+    await service.verify_code(data.email, data.otp_code)
+    return VerifyEmailResponse(message="Email vérifié avec succès", is_verified=True)
+
+
+@router.post("/resend-code", status_code=status.HTTP_204_NO_CONTENT)
+async def resend_code(data: ResendOTPRequest, session: AsyncSession = Depends(get_db)):
+    service = EmailVerificationService(session)
+    await service.resend_code(data.email)

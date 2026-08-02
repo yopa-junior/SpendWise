@@ -52,8 +52,13 @@ class AuthService:
             devise_preferee=data.devise_preferee,
             langue_preferee=data.langue_preferee,
         )
-        return await self.user_repo.create(user)
+        user = await self.user_repo.create(user)
 
+        # Envoi automatique du code de vérification après création du compte
+        verification_service = EmailVerificationService(self.session)
+        await verification_service.create_verification(user)
+
+        return user
     # ---------- Connexion ----------
 
     async def authenticate(self, email: str, mot_de_passe: str) -> User:
