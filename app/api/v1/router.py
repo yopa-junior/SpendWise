@@ -1,17 +1,20 @@
 # app/api/v1/router.py
 
 from fastapi import APIRouter
-from app.api.v1 import auth, wallets
-from app.api.v1 import auth, wallets, categories
-from app.api.v1 import auth, wallets, categories, users
-from app.api.v1 import auth, wallets, categories, users, expenses
-from app.api.v1 import auth, wallets, categories, users, expenses, budgets
-from app.api.v1 import auth, wallets, categories, users, expenses, budgets, statistics
-from app.api.v1 import auth, wallets, categories, users, expenses, budgets, statistics, notifications
-from app.api.v1 import auth, wallets, categories, users, expenses, budgets, statistics, notifications, ai
-from app.api.v1 import auth, wallets, categories, users, expenses, budgets, statistics, notifications, ai, reports
-from app.api.v1 import auth, wallets, categories, users, expenses, budgets, statistics, notifications, ai, reports, reminders
-
+from app.api.v1 import (
+    auth,
+    wallets,
+    categories,
+    users,
+    expenses,
+    budgets,
+    statistics,
+    notifications,
+    ai,
+    reports,
+    reminders,
+    currencies,
+)
 
 api_router = APIRouter()
 api_router.include_router(auth.router)
@@ -25,3 +28,4 @@ api_router.include_router(notifications.router)
 api_router.include_router(ai.router)
 api_router.include_router(reports.router)
 api_router.include_router(reminders.router)
+api_router.include_router(currencies.router)
