@@ -16,9 +16,15 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="SpendWise API", lifespan=lifespan)
 
+@app.get("/")
+async def health_check():
+    return {"status": "ok", "service": "SpendWise API"}
+
 app.include_router(api_router, prefix="/api/v1")
 
 
 @app.get("/")
 async def root():
     return {"message": "SpendWise API is running"}
+    
+
