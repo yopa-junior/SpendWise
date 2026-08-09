@@ -1,5 +1,6 @@
 # app/schemas/user.py
 
+from typing import Optional
 import uuid
 from datetime import datetime
 from pydantic import BaseModel, EmailStr, Field, field_validator
@@ -41,6 +42,7 @@ class UserUpdate(BaseModel):
     langue_preferee: LanguePreferee | None = None
     telephone: str | None = None
     fuseau_horaire: str | None = None
+    photo_profil_url: Optional[str] = None
 
 
 # ---------- Sortie : ce que l'API renvoie ----------

@@ -14,6 +14,7 @@ from app.api.v1 import (
     reports,
     reminders,
     currencies,
+    exchange_rates,
 )
 
 api_router = APIRouter()
@@ -29,3 +30,4 @@ api_router.include_router(ai.router)
 api_router.include_router(reports.router)
 api_router.include_router(reminders.router)
 api_router.include_router(currencies.router)
+api_router.include_router(exchange_rates.router)

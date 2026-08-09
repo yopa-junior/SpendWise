@@ -25,7 +25,7 @@ def upgrade() -> None:
     sa.Column('id', sa.UUID(), nullable=False),
     sa.Column('user_id', sa.UUID(), nullable=False),
     sa.Column('nom_wallet', sa.String(length=100), nullable=False),
-    sa.Column('type_wallet', sa.Enum('ESPECES', 'MOBILE_MONEY', 'BANQUE', name='wallettype'), nullable=False),
+    sa.Column('type_wallet', sa.Enum('especes', 'mobile_money', 'banque', 'epargne', name='wallettype'), nullable=False),
     sa.Column('solde', sa.Numeric(precision=15, scale=2), nullable=False),
     sa.Column('devise', sa.String(length=3), nullable=False),
     sa.Column('is_active', sa.Boolean(), nullable=False),

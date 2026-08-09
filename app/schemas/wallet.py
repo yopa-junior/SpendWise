@@ -1,74 +1,73 @@
 # app/schemas/wallet.py
 
-import uuid
-from datetime import datetime
 from decimal import Decimal
-from pydantic import BaseModel, Field
+from typing import Optional
+from datetime import date, datetime
+from pydantic import BaseModel, Field, field_serializer
 
-from app.models.wallet import WalletType
-from app.models.wallet_transaction import TransactionType
-
-
-# ---------- Entrée : création ----------
-
-from datetime import date
 
 class WalletCreate(BaseModel):
-    nom_wallet: str = Field(min_length=2, max_length=100)
-    type_wallet: WalletType
-    solde_initial: Decimal = Field(default=Decimal("0"), ge=0)
-    devise: str = Field(min_length=3, max_length=3)
-    montant_cible: Decimal | None = Field(default=None, gt=0)
-    date_echeance: date | None = None
+    nom_wallet: str = Field(..., min_length=1, max_length=100)
+    type_wallet: str
+    solde_initial: Decimal = Decimal("0.00")
+    devise: str
+    montant_cible: Optional[Decimal] = None
+    date_echeance: Optional[date] = None
 
-# ---------- Entrée : mise à jour ----------
 
 class WalletUpdate(BaseModel):
-    nom_wallet: str | None = Field(default=None, min_length=2, max_length=100)
-    is_active: bool | None = None
+    nom_wallet: Optional[str] = Field(None, min_length=1, max_length=100)
+    is_active: Optional[bool] = None
+    montant_cible: Optional[Decimal] = None  
+    date_echeance: Optional[date] = None    
 
-
-# ---------- Entrée : opération (dépôt/retrait) ----------
-
-class WalletOperationRequest(BaseModel):
-    montant: Decimal = Field(gt=0)
-    reference: str | None = Field(default=None, max_length=255)
-
-
-# ---------- Sortie : wallet ----------
 
 class WalletResponse(BaseModel):
-    id: uuid.UUID
+    id: str
     nom_wallet: str
-    type_wallet: WalletType
+    type_wallet: str
     solde: Decimal
     devise: str
+    montant_cible: Optional[Decimal]
+    date_echeance: Optional[date]
     is_active: bool
-    created_at: datetime
-    updated_at: datetime
-    montant_cible: Decimal | None
-    date_echeance: date | None
+    created_at: str
+    updated_at: str
 
-    model_config = {"from_attributes": True}
+    @field_serializer('id')
+    def serialize_id(self, value):
+        return str(value)
 
 
-# ---------- Sortie : transaction ----------
+class WalletOperationRequest(BaseModel):
+    montant: Decimal
+    reference: Optional[str] = None
+
 
 class WalletTransactionResponse(BaseModel):
-    id: uuid.UUID
-    type_transaction: TransactionType
+    id: str
+    type_transaction: str
     montant: Decimal
     solde_apres: Decimal
-    reference: str | None
-    created_at: datetime
+    reference: Optional[str]
+    created_at: str
 
-    model_config = {"from_attributes": True}
-    
+    @field_serializer('id')
+    def serialize_id(self, value):
+        return str(value)
+
+
+# AJOUT : SCHÉMA POUR LE TRANSFERT
+class TransferRequest(BaseModel):
+    destination_wallet_id: str
+    montant: Decimal
+    reference: Optional[str] = None
+
 
 class SavingsGoalProgress(BaseModel):
-    wallet_id: uuid.UUID
+    wallet_id: str
     solde_actuel: Decimal
     montant_cible: Decimal
     pourcentage: Decimal
     objectif_atteint: bool
-    date_echeance: date | None
+    date_echeance: Optional[date] = None
