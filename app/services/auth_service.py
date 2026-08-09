@@ -1,5 +1,3 @@
-# app/services/auth_service.py
-
 import uuid
 from datetime import datetime, timedelta, timezone
 
@@ -59,6 +57,26 @@ class AuthService:
         await verification_service.create_verification(user)
 
         return user
+
+    # Inscription via Google (sans mot de passe)
+    async def register_google_user(self, email: str, nom: str) -> User:
+        if await self.user_repo.email_exists(email):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Un compte existe déjà avec cet email",
+            )
+
+        user = User(
+            nom=nom,
+            email=email,
+            mot_de_passe_hash=None,  # Pas de mot de passe
+            devise_preferee="XAF",
+            langue_preferee="fr",
+            is_verified=True,        # Considéré comme vérifié
+        )
+        user = await self.user_repo.create(user)
+        return user
+
     # ---------- Connexion ----------
 
     async def authenticate(self, email: str, mot_de_passe: str) -> User:

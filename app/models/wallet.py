@@ -29,7 +29,13 @@ class Wallet(Base):
     )
 
     nom_wallet: Mapped[str] = mapped_column(String(100), nullable=False)
-    type_wallet: Mapped[WalletType] = mapped_column(SQLEnum(WalletType), nullable=False)
+    type_wallet: Mapped[WalletType] = mapped_column(
+    SQLEnum(
+        WalletType,
+        values_callable=lambda enum: [e.value for e in enum]
+    ),
+    nullable=False
+)
 
     # Numeric plutôt que Float : indispensable pour l'argent, évite les erreurs d'arrondi binaire
     solde: Mapped[float] = mapped_column(Numeric(15, 2), default=0, nullable=False)
@@ -52,4 +58,8 @@ class Wallet(Base):
     )
 
     def __repr__(self) -> str:
-        return f"<Wallet {self.nom_wallet} ({self.type_wallet}) solde={self.solde}>"
+        return (
+            f"<Wallet {self.nom_wallet} "
+            f"({self.type_wallet.value}) "
+            f"solde={self.solde}>"
+        )

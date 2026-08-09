@@ -1,16 +1,15 @@
-# app/services/ai_service.py
-
 import uuid
 from datetime import date, datetime, timezone
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from typing import List, Dict, Optional
 
 from app.models.ai_usage_log import AIUsageLog
 from app.repositories.category_repository import CategoryRepository
 from app.ai.categorizer import suggest_category
 from app.exceptions.ai_exceptions import AIQuotaExceededException
-from app.ai.chatbot import detect_intent, formulate_response, _resolve_period
-from app.ai.prompts import FALLBACK_NON_RECONNUE, FALLBACK_HORS_SUJET, FALLBACK_ERREUR_IA
+from app.ai.chatbot import detect_intent, formulate_response, _resolve_period, answer_open_question
+from app.ai.prompts import FALLBACK_NON_RECONNUE, FALLBACK_ERREUR_IA
 from app.services.statistics_service import StatisticsService
 from app.services.budget_service import BudgetService
 from app.repositories.budget_repository import BudgetRepository
@@ -58,7 +57,6 @@ class AIService:
         if result is None:
             return None
 
-        # Retrouve l'id réel de la catégorie suggérée pour faciliter l'usage frontend
         category_match = next((c for c in categories if c.nom == result.categorie_nom), None)
 
         return {
@@ -67,7 +65,12 @@ class AIService:
             "confiance": result.confiance,
         }
         
-    async def ask_chatbot(self, user_id: uuid.UUID, question: str) -> str:
+    async def ask_chatbot(
+        self, 
+        user_id: uuid.UUID, 
+        question: str, 
+        historique: Optional[List[Dict[str, str]]] = None
+    ) -> str:
         await self._check_and_increment_quota(user_id)
 
         categories = await self.category_repo.list_for_user(user_id)
@@ -77,8 +80,9 @@ class AIService:
         if intent is None:
             return FALLBACK_ERREUR_IA
 
+        # ✅ CHANGEMENT MAJEUR : Les questions "hors_sujet" sont maintenant traitées par Gemini libre
         if intent.intention == "hors_sujet":
-            return FALLBACK_HORS_SUJET
+            return await answer_open_question(question)
 
         if intent.intention == "non_reconnue":
             return FALLBACK_NON_RECONNUE
@@ -89,14 +93,14 @@ class AIService:
         if intent.intention == "total_periode":
             summary = await stats_service.get_summary(user_id, date_debut, date_fin)
             donnee = f"{summary.total_periode} {summary.devise}"
-            return await formulate_response(question, donnee)
+            return await formulate_response(question, donnee, historique=historique)
 
         if intent.intention == "categorie_principale":
             summary = await stats_service.get_summary(user_id, date_debut, date_fin)
             if summary.categorie_principale_nom is None:
                 return "Tu n'as encore aucune dépense enregistrée sur cette période."
             donnee = f"{summary.categorie_principale_nom}: {summary.categorie_principale_montant} {summary.devise}"
-            return await formulate_response(question, donnee)
+            return await formulate_response(question, donnee, historique=historique)
 
         if intent.intention == "total_categorie_periode":
             if intent.categorie_mentionnee is None:
@@ -109,7 +113,7 @@ class AIService:
             if match is None:
                 return f"Tu n'as aucune dépense en {intent.categorie_mentionnee} sur cette période."
             donnee = f"{match.montant_total} {breakdown.devise}"
-            return await formulate_response(question, donnee)
+            return await formulate_response(question, donnee, historique=historique)
 
         if intent.intention == "progression_budget":
             budget_repo = BudgetRepository(self.session)
@@ -131,6 +135,6 @@ class AIService:
 
             progress = await budget_service.get_progress(budget.id, user_id)
             donnee = f"{progress.pourcentage}% utilisé ({progress.montant_depense} sur {progress.montant_limite} {progress.devise})"
-            return await formulate_response(question, donnee)
+            return await formulate_response(question, donnee, historique=historique)
 
         return FALLBACK_NON_RECONNUE

@@ -1,5 +1,3 @@
-# app/api/v1/ai.py
-
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -27,6 +25,7 @@ async def suggest_category(
 
     return CategorySuggestionResponse(**result)
 
+
 from app.schemas.ai import ChatRequest, ChatResponse
 
 @router.post("/chat", response_model=ChatResponse)
@@ -36,5 +35,15 @@ async def chat(
     current_user: User = Depends(get_current_verified_user),
 ):
     service = AIService(session)
-    reponse = await service.ask_chatbot(current_user.id, data.question)
+    
+    # 🚀 MODIFICATION ICI : On récupère l'historique envoyé par Flutter
+    # Si data a un champ 'historique', on le passe. Sinon, on passe None.
+    historique_recu = getattr(data, 'historique', None)
+    
+    reponse = await service.ask_chatbot(
+        user_id=current_user.id, 
+        question=data.question,
+        historique=historique_recu  # <--- On transmet la mémoire au service
+    )
+    
     return ChatResponse(reponse=reponse)

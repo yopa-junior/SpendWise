@@ -1,5 +1,3 @@
-# app/models/user.py
-
 import uuid
 import enum
 from sqlalchemy import Enum as SQLEnum
@@ -27,7 +25,9 @@ class User(Base):
     # Informations de base
     nom: Mapped[str] = mapped_column(String(150), nullable=False)
     email: Mapped[str] = mapped_column(String(255), unique=True, index=True, nullable=False)
-    mot_de_passe_hash: Mapped[str] = mapped_column(String(255), nullable=False)
+    
+    #  Rendre le mot de passe nullable pour les comptes Google
+    mot_de_passe_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
     # Préférences
     devise_preferee: Mapped[str | None] = mapped_column(
