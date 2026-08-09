@@ -23,6 +23,11 @@ class Settings(BaseSettings):
     MAIL_PORT: int = 587
     MAIL_STARTTLS: bool = True
     MAIL_SSL_TLS: bool = False
+    
+    # IA
+    
+    GEMINI_API_KEY: str
+    
 
     # Frontend (pour les liens dans les emails)
     FRONTEND_URL: str = "http://localhost:3000"

@@ -1,5 +1,3 @@
-# app/services/auth_service.py
-
 import uuid
 from datetime import datetime, timedelta, timezone
 
@@ -21,6 +19,9 @@ from app.repositories.user_repository import UserRepository
 from app.repositories.refresh_token_repository import RefreshTokenRepository
 from app.schemas.user import UserCreate
 from app.schemas.token import Token
+from app.models.email_verification import OTPPurpose
+from app.exceptions.email_verification_exceptions import IncorrectCurrentPasswordException
+from app.services.email_verification_service import EmailVerificationService
 
 MAX_FAILED_ATTEMPTS = 5
 LOCK_DURATION_MINUTES = 15
@@ -49,7 +50,32 @@ class AuthService:
             devise_preferee=data.devise_preferee,
             langue_preferee=data.langue_preferee,
         )
-        return await self.user_repo.create(user)
+        user = await self.user_repo.create(user)
+
+        # Envoi automatique du code de vérification après création du compte
+        verification_service = EmailVerificationService(self.session)
+        await verification_service.create_verification(user)
+
+        return user
+
+    # Inscription via Google (sans mot de passe)
+    async def register_google_user(self, email: str, nom: str) -> User:
+        if await self.user_repo.email_exists(email):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Un compte existe déjà avec cet email",
+            )
+
+        user = User(
+            nom=nom,
+            email=email,
+            mot_de_passe_hash=None,  # Pas de mot de passe
+            devise_preferee="XAF",
+            langue_preferee="fr",
+            is_verified=True,        # Considéré comme vérifié
+        )
+        user = await self.user_repo.create(user)
+        return user
 
     # ---------- Connexion ----------
 
@@ -146,3 +172,41 @@ class AuthService:
 
     async def logout_all_devices(self, user_id: uuid.UUID) -> None:
         await self.refresh_repo.revoke_all_for_user(user_id)
+        
+        
+    # ---------- Mot de passe oublié ----------
+
+    async def forgot_password(self, email: str) -> None:
+        user = await self.user_repo.get_by_email(email)
+        # Ne jamais révéler si l'email existe : réponse identique dans tous les cas
+        if user is None:
+            return
+
+        verification_service = EmailVerificationService(self.session)
+        await verification_service.create_verification(user, purpose=OTPPurpose.PASSWORD_RESET)
+
+    # ---------- Réinitialisation avec code ----------
+
+    async def reset_password(self, email: str, otp_code: str, nouveau_mot_de_passe: str) -> None:
+        verification_service = EmailVerificationService(self.session)
+        user = await verification_service.verify_code(email, otp_code, purpose=OTPPurpose.PASSWORD_RESET)
+
+        user.mot_de_passe_hash = hash_password(nouveau_mot_de_passe)
+        await self.session.commit()
+
+        # Sécurité : invalide toutes les sessions existantes après un reset de mot de passe
+        await self.refresh_repo.revoke_all_for_user(user.id)
+
+    # ---------- Changement de mot de passe (connecté) ----------
+
+    async def change_password(
+        self, user: User, mot_de_passe_actuel: str, nouveau_mot_de_passe: str
+    ) -> None:
+        if not verify_password(mot_de_passe_actuel, user.mot_de_passe_hash):
+            raise IncorrectCurrentPasswordException()
+
+        user.mot_de_passe_hash = hash_password(nouveau_mot_de_passe)
+        await self.session.commit()
+
+        # Sécurité : invalide toutes les autres sessions après un changement de mot de passe
+        await self.refresh_repo.revoke_all_for_user(user.id)
