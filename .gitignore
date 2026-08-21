@@ -70,4 +70,4 @@ celerybeat-schedule
 celerybeat.pid
 
 # Redis dump
-dump.rdb
+dump.rdbfirebase-adminsdk.json
