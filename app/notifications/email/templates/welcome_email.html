@@ -18,7 +18,7 @@
         box-shadow: 0 4px 12px rgba(0,0,0,0.08);
     }
     .header {
-        background: linear-gradient(135deg, #dc2626, #ef4444);
+        background: linear-gradient(135deg, #2563eb, #7c3aed);
         color: #ffffff;
         padding: 28px 24px;
         text-align: center;
@@ -32,7 +32,7 @@
     .header p {
         margin: 6px 0 0;
         font-size: 14px;
-        color: #fecaca;
+        color: #c7d2fe;
     }
     .content {
         padding: 28px 24px;
@@ -41,22 +41,6 @@
     }
     .content p {
         margin-bottom: 16px;
-    }
-    .button {
-        display: inline-block;
-        background: linear-gradient(135deg, #dc2626, #ef4444);
-        color: #ffffff;
-        text-decoration: none;
-        padding: 14px 28px;
-        border-radius: 8px;
-        font-weight: 600;
-        font-size: 16px;
-        margin-top: 8px;
-        box-shadow: 0 2px 6px rgba(220, 38, 38, 0.25);
-        transition: transform 0.1s ease;
-    }
-    .button:hover {
-        transform: scale(1.02);
     }
     .footer {
         padding: 20px 24px;
@@ -78,7 +62,7 @@
         font-size: 11px;
     }
     .footer-links a {
-        color: #dc2626;
+        color: #2563eb;
         text-decoration: none;
     }
     .footer-links a:hover {
@@ -89,23 +73,19 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>🔐 Réinitialisation du mot de passe</h1>
-            <p>SpendWise — Gestion de dépenses intelligente</p>
+            <h1>🎉 Bienvenue sur SpendWise</h1>
+            <p>Gestion de dépenses intelligente</p>
         </div>
         <div class="content">
             <p style="font-weight:600; margin-bottom:8px;">Bonjour {{ nom }},</p>
             <p style="color:#475569;">
-                Tu as demandé la réinitialisation de ton mot de passe SpendWise.
-                Clique sur le bouton ci-dessous pour en créer un nouveau.
+                Ton compte SpendWise a été créé avec succès. Tu peux dès maintenant commencer à suivre tes dépenses, créer tes portefeuilles et fixer tes premiers budgets.
             </p>
-            <div style="text-align:center;">
-                <a class="button" href="{{ reset_link }}">Réinitialiser mon mot de passe</a>
-            </div>
-            <p style="margin-top: 24px; font-size: 13px; color: #64748b; text-align:center;">
-                ⏱️ Ce lien expire dans {{ expiration_minutes }} minutes.
+            <p style="color:#475569;">
+                L'équipe SpendWise te souhaite une excellente expérience 🚀
             </p>
-            <p style="font-size: 13px; color: #64748b; text-align:center;">
-                Si tu n'es pas à l'origine de cette demande, ignore simplement cet email.
+            <p style="font-size:14px; color:#64748b; margin-top:16px;">
+                À très vite sur l'application.
             </p>
         </div>
         <div class="footer">

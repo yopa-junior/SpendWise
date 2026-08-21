@@ -1,5 +1,3 @@
-# app/services/budget_alert_service.py
-
 import uuid
 from datetime import datetime, timezone
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -10,6 +8,8 @@ from app.repositories.budget_repository import BudgetRepository
 from app.repositories.budget_notification_log_repository import BudgetNotificationLogRepository
 from app.services.budget_service import BudgetService
 from app.services.notification_service import NotificationService
+from app.services.fcm_service import send_push_notification  # Ajout de l'import FCM
+from app.repositories.user_repository import UserRepository   # Pour récupérer l'utilisateur
 
 
 class BudgetAlertService:
@@ -19,6 +19,7 @@ class BudgetAlertService:
         self.log_repo = BudgetNotificationLogRepository(session)
         self.budget_service = BudgetService(session)
         self.notification_service = NotificationService(session)
+        self.user_repo = UserRepository(session)  # Pour récupérer l'utilisateur
 
     async def check_budgets_for_category(
         self, user_id: uuid.UUID, category_id: uuid.UUID | None
@@ -49,11 +50,14 @@ class BudgetAlertService:
 
         pourcentage_label = "100%" if seuil_type == NotificationType.BUDGET_SEUIL_100 else "80%"
         titre = f"Budget à {pourcentage_label}"
+        
+        # Modification pour inclure le nom du budget
         message = (
-            f"Tu as atteint {progress.pourcentage}% de ton budget "
+            f"Pour le budget '{budget.nom}', tu as atteint {progress.pourcentage}% de ton budget "
             f"({progress.montant_depense} {progress.devise} sur {progress.montant_limite} {progress.devise})."
         )
 
+        # 1. Créer la notification en base de données
         await self.notification_service.create_notification(
             user_id=user_id,
             type=seuil_type,
@@ -62,6 +66,7 @@ class BudgetAlertService:
             reference_id=budget_id,
         )
 
+        # 2. Ajouter le log pour éviter les doublons
         self.session.add(
             BudgetNotificationLog(
                 id=uuid.uuid4(),
@@ -72,3 +77,14 @@ class BudgetAlertService:
             )
         )
         await self.session.commit()
+
+        # 3. Envoyer la notification push via FCM
+        user = await self.user_repo.get_by_id(user_id)
+        if user and user.fcm_token:
+            await send_push_notification(
+                session=self.session,
+                user_id=user_id,
+                title=titre,
+                body=message,
+                data={"type": seuil_type.value, "budget_id": str(budget_id)}
+            )

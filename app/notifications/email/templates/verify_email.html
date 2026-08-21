@@ -3,27 +3,117 @@
 <head>
 <meta charset="UTF-8">
 <style>
-    body { font-family: Arial, sans-serif; background-color: #f4f6f8; margin: 0; padding: 0; }
-    .container { max-width: 500px; margin: 40px auto; background: #ffffff; border-radius: 8px; overflow: hidden; }
-    .header { background-color: #2563eb; color: #ffffff; padding: 24px; text-align: center; }
-    .content { padding: 24px; color: #333333; line-height: 1.6; }
-    .button { display: inline-block; background-color: #2563eb; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 6px; margin-top: 16px; }
-    .footer { padding: 16px 24px; font-size: 12px; color: #999999; text-align: center; }
+    body {
+        font-family: 'Helvetica Neue', Arial, sans-serif;
+        background-color: #f4f6f8;
+        margin: 0;
+        padding: 0;
+    }
+    .container {
+        max-width: 500px;
+        margin: 40px auto;
+        background: #ffffff;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    }
+    .header {
+        background: linear-gradient(135deg, #2563eb, #3b82f6);
+        color: #ffffff;
+        padding: 28px 24px;
+        text-align: center;
+    }
+    .header h1 {
+        margin: 0;
+        font-size: 22px;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+    }
+    .header p {
+        margin: 6px 0 0;
+        font-size: 14px;
+        color: #bfdbfe;
+    }
+    .content {
+        padding: 28px 24px;
+        color: #1e293b;
+        line-height: 1.6;
+    }
+    .content p {
+        margin-bottom: 16px;
+    }
+    .button {
+        display: inline-block;
+        background: linear-gradient(135deg, #2563eb, #3b82f6);
+        color: #ffffff;
+        text-decoration: none;
+        padding: 14px 28px;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 16px;
+        margin-top: 8px;
+        box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25);
+        transition: transform 0.1s ease;
+    }
+    .button:hover {
+        transform: scale(1.02);
+    }
+    .footer {
+        padding: 20px 24px;
+        background-color: #f8fafc;
+        text-align: center;
+        font-size: 13px;
+        color: #94a3b8;
+        border-top: 1px solid #e2e8f0;
+    }
+    .footer-brand {
+        font-weight: 600;
+        color: #64748b;
+    }
+    .footer-copy {
+        margin-top: 4px;
+    }
+    .footer-links {
+        margin-top: 6px;
+        font-size: 11px;
+    }
+    .footer-links a {
+        color: #2563eb;
+        text-decoration: none;
+    }
+    .footer-links a:hover {
+        text-decoration: underline;
+    }
 </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>Vérifie ton adresse email</h1>
+            <h1>📧 Vérifie ton adresse email</h1>
+            <p>SpendWise — Gestion de dépenses intelligente</p>
         </div>
         <div class="content">
-            <p>Bonjour {{ nom }},</p>
-            <p>Merci de confirmer ton adresse email pour activer toutes les fonctionnalités de SpendWise, notamment les notifications et rappels.</p>
-            <a class="button" href="{{ verification_link }}">Vérifier mon email</a>
-            <p style="margin-top: 20px; font-size: 13px; color: #777;">Si le bouton ne fonctionne pas, copie ce lien dans ton navigateur : {{ verification_link }}</p>
+            <p style="font-weight:600; margin-bottom:8px;">Bonjour {{ nom }},</p>
+            <p style="color:#475569;">
+                Merci de confirmer ton adresse email pour activer toutes les fonctionnalités de SpendWise, notamment les notifications et rappels.
+            </p>
+            <div style="text-align:center;">
+                <a class="button" href="{{ verification_link }}">Vérifier mon email</a>
+            </div>
+            <p style="margin-top: 20px; font-size: 12px; color: #94a3b8; text-align:center;">
+                Si le bouton ne fonctionne pas, copie ce lien dans ton navigateur :<br>
+                <span style="word-break: break-all; font-size: 11px;">{{ verification_link }}</span>
+            </p>
         </div>
         <div class="footer">
-            SpendWise — Gestion de dépenses intelligente
+            <div class="footer-brand">SpendWise — Gestion de dépenses intelligente</div>
+            <div class="footer-copy">
+                &copy; 2026 SpendWise. Tous droits réservés.
+            </div>
+            <div class="footer-links">
+                <a href="#">Mentions légales</a>
+                &bull; <a href="#">Paramètres de confidentialité</a>
+            </div>
         </div>
     </div>
 </body>

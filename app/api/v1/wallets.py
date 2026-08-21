@@ -21,7 +21,7 @@ from app.schemas.wallet import SavingsGoalProgress
 router = APIRouter(prefix="/wallets", tags=["Wallets"])
 
 
-# 🔥 Helper pour convertir les wallets en réponse
+# Helper pour convertir les wallets en réponse
 def to_wallet_response(wallet) -> dict:
     return {
         "id": str(wallet.id),

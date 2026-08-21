@@ -1,5 +1,3 @@
-# app/services/email_verification_service.py
-
 import secrets
 import uuid
 from datetime import datetime, timedelta, timezone
@@ -78,21 +76,34 @@ class EmailVerificationService:
         )
         verification = await self.verification_repo.create(verification)
 
-        await self._send_otp_email(user, otp_code)
+        await self._send_otp_email(user, otp_code, purpose)  # ✅ Passage du purpose
         return verification
 
-    async def _send_otp_email(self, user: User, otp_code: str) -> None:
-        otp_html = self._build_colored_otp_html(otp_code)
-        await send_email(
-            subject="🎉 Ton code de vérification SpendWise",
-            recipients=[user.email],
-            template_name="otp_email.html",
-            template_body={
-                "nom": user.nom,
-                "otp_html": otp_html,
-                "expiration_minutes": OTP_EXPIRE_MINUTES,
-            },
-        )
+    async def _send_otp_email(self, user: User, otp_code: str, purpose: OTPPurpose) -> None:
+        if purpose == OTPPurpose.EMAIL_VERIFICATION:
+            otp_html = self._build_colored_otp_html(otp_code)
+            await send_email(
+                subject="🎉 Ton code de vérification SpendWise",
+                recipients=[user.email],
+                template_name="otp_email.html",
+                template_body={
+                    "nom": user.nom,
+                    "otp_html": otp_html,
+                    "expiration_minutes": OTP_EXPIRE_MINUTES,
+                },
+            )
+        elif purpose == OTPPurpose.PASSWORD_RESET:
+            reset_link = f"https://spendwise.app/reset-password?code={otp_code}&email={user.email}"
+            await send_email(
+                subject="🔐 Réinitialisation de ton mot de passe SpendWise",
+                recipients=[user.email],
+                template_name="reset_password_email.html",
+                template_body={
+                    "nom": user.nom,
+                    "reset_link": reset_link,
+                    "expiration_minutes": OTP_EXPIRE_MINUTES,
+                },
+            )
 
     # ---------- Vérification du code ----------
 

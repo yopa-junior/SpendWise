@@ -80,6 +80,8 @@ class User(Base):
         back_populates="user", cascade="all, delete-orphan"
     )
 
+    fcm_token: Mapped[str | None] = mapped_column(String(255), nullable=True)
+
     def __repr__(self) -> str:
         return f"<User id={self.id} email={self.email}>"
     

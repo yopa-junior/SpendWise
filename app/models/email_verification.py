@@ -18,7 +18,7 @@ class OTPPurpose(str, enum.Enum):
 
 class EmailVerification(Base):
     __tablename__ = "email_verifications"
-    __table_args__ = (
+    __table_args__ = ( 
         Index("ix_email_verifications_user_purpose", "user_id", "purpose"),
     )
 

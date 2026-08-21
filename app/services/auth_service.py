@@ -22,6 +22,7 @@ from app.schemas.token import Token
 from app.models.email_verification import OTPPurpose
 from app.exceptions.email_verification_exceptions import IncorrectCurrentPasswordException
 from app.services.email_verification_service import EmailVerificationService
+from app.notifications.email.mail import send_email  # ✅ Ajouté
 
 MAX_FAILED_ATTEMPTS = 5
 LOCK_DURATION_MINUTES = 15
@@ -52,9 +53,17 @@ class AuthService:
         )
         user = await self.user_repo.create(user)
 
-        # Envoi automatique du code de vérification après création du compte
+        # Envoi du code de vérification
         verification_service = EmailVerificationService(self.session)
         await verification_service.create_verification(user)
+
+        # ✅ Envoi de l'email de bienvenue
+        await send_email(
+            subject="🎉 Bienvenue sur SpendWise",
+            recipients=[user.email],
+            template_name="welcome_email.html",
+            template_body={"nom": user.nom},
+        )
 
         return user
 

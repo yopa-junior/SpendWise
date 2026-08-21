@@ -1,5 +1,3 @@
-# app/api/v1/users.py
-
 from fastapi import APIRouter, Depends, HTTPException, status, File, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 import uuid
@@ -9,7 +7,7 @@ from datetime import datetime
 from app.database.session import get_db
 from app.dependencies.auth import get_current_verified_user
 from app.models.user import User
-from app.schemas.user import UserUpdate, UserResponse
+from app.schemas.user import UserUpdate, UserResponse, FCMTokenUpdate
 from app.services.user_service import UserService
 
 router = APIRouter(prefix="/users", tags=["Users"])
@@ -107,7 +105,7 @@ async def upload_profile_photo(
         # Construire l'URL (utiliser l'IP du serveur)
         # Pour le développement, utiliser l'IP locale
         # À CHANGER AVEC TON IP
-        base_url = "http://10.180.179.130:8000"  # ← METS TON IP ICI
+        base_url = "http://10.154.246.130:8000"  # mettre son adresse IP ici
         photo_url = f"{base_url}/uploads/profiles/{filename}"
         
         # Mettre à jour l'utilisateur
@@ -148,3 +146,15 @@ async def delete_profile_photo(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=str(e)
         )
+
+
+@router.post("/fcm-token", status_code=status.HTTP_204_NO_CONTENT)
+async def register_fcm_token(
+    data: FCMTokenUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_verified_user),
+):
+    """Enregistre ou met à jour le token FCM de l'utilisateur."""
+    current_user.fcm_token = data.fcm_token
+    await db.commit()
+    # Pas de retour nécessaire, on renvoie juste 204 No Content

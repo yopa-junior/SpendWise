@@ -6,6 +6,7 @@ from datetime import datetime
 from pydantic import BaseModel, EmailStr, Field, field_validator
 
 from app.models.user import LanguePreferee
+from pydantic import BaseModel
 
 
 # ---------- Entrée : inscription ----------
@@ -96,3 +97,7 @@ class ChangePasswordRequest(BaseModel):
         if not any(c.isdigit() for c in v):
             raise ValueError("Le mot de passe doit contenir au moins un chiffre")
         return v
+
+
+class FCMTokenUpdate(BaseModel):
+    fcm_token: str
