@@ -52,8 +52,9 @@ def do_run_migrations(connection):
 
 
 async def run_migrations_online() -> None:
+    # Utilise directement settings.DATABASE_URL (postgresql+asyncpg://)
     connectable = async_engine_from_config(
-        config.get_section(config.config_ini_section),
+        {"sqlalchemy.url": settings.DATABASE_URL}, 
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
     )
