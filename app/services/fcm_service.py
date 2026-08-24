@@ -6,7 +6,9 @@ import uuid
 import os
 
 # Initialisation de Firebase Admin SDK
-cred = credentials.Certificate("firebase-adminsdk.json")
+# Utilise FIREBASE_CREDENTIALS_PATH si définie, sinon cherche le fichier local
+cred_path = os.getenv("FIREBASE_CREDENTIALS_PATH", "firebase-adminsdk.json")
+cred = credentials.Certificate(cred_path)
 firebase_admin.initialize_app(cred)
 
 async def send_push_notification(
