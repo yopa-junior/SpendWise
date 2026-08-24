@@ -31,7 +31,10 @@ app = FastAPI(
 )
 
 
-# Servir les fichiers uploadés
+# ✅ Modifier le montage pour qu'il vérifie que le dossier existe
+if not os.path.exists(UPLOADS_DIR):
+    os.makedirs(UPLOADS_DIR, exist_ok=True)
+
 app.mount(
     "/uploads",
     StaticFiles(directory=UPLOADS_DIR),
