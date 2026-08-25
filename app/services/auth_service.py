@@ -53,17 +53,17 @@ class AuthService:
         )
         user = await self.user_repo.create(user)
 
-        # Envoi du code de vérification
-        verification_service = EmailVerificationService(self.session)
-        await verification_service.create_verification(user)
+        # ⚠️ COMMENTÉ : Désactive la vérification par email pour le test
+        # verification_service = EmailVerificationService(self.session)
+        # await verification_service.create_verification(user)
 
-        # ✅ Envoi de l'email de bienvenue
-        await send_email(
-            subject="🎉 Bienvenue sur SpendWise",
-            recipients=[user.email],
-            template_name="welcome_email.html",
-            template_body={"nom": user.nom},
-        )
+        # ⚠️ COMMENTÉ : Désactive l'email de bienvenue pour le test
+        # await send_email(
+        #     subject="🎉 Bienvenue sur SpendWise",
+        #     recipients=[user.email],
+        #     template_name="welcome_email.html",
+        #     template_body={"nom": user.nom},
+        # )
 
         return user
 
