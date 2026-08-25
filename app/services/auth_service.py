@@ -54,8 +54,8 @@ class AuthService:
         user = await self.user_repo.create(user)
 
         # ⚠️ COMMENTÉ : Désactive la vérification par email pour le test
-        # verification_service = EmailVerificationService(self.session)
-        # await verification_service.create_verification(user)
+        verification_service = EmailVerificationService(self.session)
+        await verification_service.create_verification(user)
 
         # ⚠️ COMMENTÉ : Désactive l'email de bienvenue pour le test
         # await send_email(
