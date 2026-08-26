@@ -58,12 +58,12 @@ class AuthService:
         await verification_service.create_verification(user)
 
         # ⚠️ COMMENTÉ : Désactive l'email de bienvenue pour le test
-        # await send_email(
-        #     subject="🎉 Bienvenue sur SpendWise",
-        #     recipients=[user.email],
-        #     template_name="welcome_email.html",
-        #     template_body={"nom": user.nom},
-        # )
+        await send_email(
+            subject="🎉 Bienvenue sur SpendWise",
+            recipients=[user.email],
+            template_name="welcome_email.html",
+            template_body={"nom": user.nom},
+        )
 
         return user
 
