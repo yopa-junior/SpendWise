@@ -20,7 +20,7 @@ class Settings(BaseSettings):
     MAIL_FROM: str = "djonjuejunior@gmail.com"
     MAIL_FROM_NAME: str = "SpendWise"
     MAIL_SERVER: str = "smtp.sendgrid.net"
-    MAIL_PORT: int = 587
+    MAIL_PORT: int = 2525
     MAIL_STARTTLS: bool = True
     MAIL_SSL_TLS: bool = False
     
