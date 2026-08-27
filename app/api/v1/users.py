@@ -105,7 +105,7 @@ async def upload_profile_photo(
         # Construire l'URL (utiliser l'IP du serveur)
         # Pour le développement, utiliser l'IP locale
         # À CHANGER AVEC TON IP
-        base_url = "http://10.154.246.130:8000"  # mettre son adresse IP ici
+        base_url = "https://spendwise-5c75.onrender.com"  # mettre son adresse IP ici
         photo_url = f"{base_url}/uploads/profiles/{filename}"
         
         # Mettre à jour l'utilisateur
