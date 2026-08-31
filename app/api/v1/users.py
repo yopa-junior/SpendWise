@@ -1,14 +1,14 @@
 from fastapi import APIRouter, Depends, HTTPException, status, File, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
+import cloudinary
+import cloudinary.uploader
 import uuid
-import os
-from datetime import datetime
-
 from app.database.session import get_db
 from app.dependencies.auth import get_current_verified_user
 from app.models.user import User
 from app.schemas.user import UserUpdate, UserResponse, FCMTokenUpdate
 from app.services.user_service import UserService
+from app.core.config import settings
 
 router = APIRouter(prefix="/users", tags=["Users"])
 
@@ -79,74 +79,113 @@ async def upload_profile_photo(
     session: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_verified_user),
 ):
-    """Uploader une photo de profil"""
+    """Uploader une photo de profil vers Cloudinary"""
+
     try:
-        # Valider le type de fichier
-        if not photo.content_type or not photo.content_type.startswith('image/'):
+        # Vérifier le type de fichier
+        if not photo.content_type or not photo.content_type.startswith("image/"):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Le fichier doit être une image"
+                detail="Le fichier doit être une image",
             )
-        
-        # Créer le dossier si inexistant
-        upload_dir = "uploads/profiles"
-        os.makedirs(upload_dir, exist_ok=True)
-        
-        # Générer un nom de fichier unique
-        extension = photo.filename.split('.')[-1] if photo.filename else 'jpg'
-        filename = f"{current_user.id}_{datetime.now().strftime('%Y%m%d%H%M%S')}.{extension}"
-        filepath = os.path.join(upload_dir, filename)
-        
-        # Sauvegarder le fichier
-        with open(filepath, "wb") as f:
-            content = await photo.read()
-            f.write(content)
-        
-        # Construire l'URL (utiliser l'IP du serveur)
-        # Pour le développement, utiliser l'IP locale
-        # À CHANGER AVEC TON IP
-        base_url = "https://spendwise-5c75.onrender.com"  # mettre son adresse IP ici
-        photo_url = f"{base_url}/uploads/profiles/{filename}"
-        
-        # Mettre à jour l'utilisateur
-        service = UserService(session)
-        user = await service.update_profile(current_user.id, {"photo_profil_url": photo_url})
-        
-        return {
-            "photo_profil_url": photo_url,
-            "message": "Photo de profil mise à jour avec succès"
-        }
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(e)
+
+        # Configurer Cloudinary
+        cloudinary.config(
+            cloud_name=settings.CLOUDINARY_CLOUD_NAME,
+            api_key=settings.CLOUDINARY_API_KEY,
+            api_secret=settings.CLOUDINARY_API_SECRET,
+            secure=True,
         )
 
+        # Lire le fichier
+        content = await photo.read()
+
+        # Upload vers Cloudinary
+        result = cloudinary.uploader.upload(
+            content,
+            folder="spendwise/profiles",
+            public_id=str(current_user.id),
+            overwrite=True,
+            resource_type="image",
+        )
+
+        # URL permanente Cloudinary
+        photo_url = result["secure_url"]
+
+        # Enregistrer l'URL dans PostgreSQL
+        service = UserService(session)
+
+        user = await service.update_profile(
+            current_user.id,
+            {"photo_profil_url": photo_url},
+        )
+
+        return {
+            "photo_profil_url": user.photo_profil_url,
+            "message": "Photo de profil mise à jour avec succès",
+        }
+
+    except HTTPException:
+        raise
+
+    except Exception as e:
+        print("========== CLOUDINARY ERROR ==========")
+        print(str(e))
+        print("======================================")
+
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Erreur lors de l'upload de la photo",
+        )
 
 @router.delete("/me/photo")
 async def delete_profile_photo(
     session: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_verified_user),
 ):
-    """Supprimer la photo de profil"""
+    """Supprimer la photo de profil de Cloudinary"""
+
     try:
+        # Récupérer l'ancienne URL AVANT de la supprimer
+        old_photo_url = current_user.photo_profil_url
+
+        if old_photo_url:
+            cloudinary.config(
+                cloud_name=settings.CLOUDINARY_CLOUD_NAME,
+                api_key=settings.CLOUDINARY_API_KEY,
+                api_secret=settings.CLOUDINARY_API_SECRET,
+                secure=True,
+            )
+
+            # Le public_id correspond à spendwise/profiles/<user_id>
+            public_id = f"spendwise/profiles/{current_user.id}"
+
+            cloudinary.uploader.destroy(
+                public_id,
+                resource_type="image",
+            )
+
+        # Supprimer l'URL de la base de données
         service = UserService(session)
-        user = await service.update_profile(current_user.id, {"photo_profil_url": None})
-        
-        # Supprimer le fichier physique si existant
-        if user.photo_profil_url:
-            filename = user.photo_profil_url.split('/')[-1]
-            filepath = f"uploads/profiles/{filename}"
-            if os.path.exists(filepath):
-                os.remove(filepath)
-        
-        return {"message": "Photo de profil supprimée"}
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(e)
+
+        await service.update_profile(
+            current_user.id,
+            {"photo_profil_url": None},
         )
 
+        return {
+            "message": "Photo de profil supprimée"
+        }
+
+    except Exception as e:
+        print("========== CLOUDINARY DELETE ERROR ==========")
+        print(str(e))
+        print("=============================================")
+
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Erreur lors de la suppression de la photo",
+        )
 
 @router.post("/fcm-token", status_code=status.HTTP_204_NO_CONTENT)
 async def register_fcm_token(

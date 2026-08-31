@@ -23,6 +23,10 @@ class Settings(BaseSettings):
     MAIL_PORT: int = 2525
     MAIL_STARTTLS: bool = True
     MAIL_SSL_TLS: bool = False
+    # Cloudinary
+    CLOUDINARY_CLOUD_NAME: str = ""
+    CLOUDINARY_API_KEY: str = ""
+    CLOUDINARY_API_SECRET: str = ""
     
     # IA
     
