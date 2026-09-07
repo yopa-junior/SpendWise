@@ -14,7 +14,7 @@ client = genai.Client(
 )
 
 # Modèle utilisé par SpendWise
-MODEL_NAME = "gemini-3.6-flash"
+MODEL_NAME = "gemini-1.5-flash"
 
 # Nombre maximum de tentatives
 MAX_RETRIES = 3
